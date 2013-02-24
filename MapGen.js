@@ -23,13 +23,30 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
  
-function drawMap(worldMap, canvasId) {
+function drawMap(worldMap, canvasId, drawDebug) {
 	
 	var map = document.getElementById(canvasId).getContext("2d");
 	
 	var width = map.canvas.width;
 	
+	var widthOffset = 0;
+	
 	var height = map.canvas.height;
+	
+	var heightOffset = 0;
+	
+	if(width > height) {
+		
+		widthOffset = width - height;
+		
+		width = height;
+		
+	} else if (height > width) {
+		
+		heightOffset = height - width;
+		
+		height = width;
+	}
 	
 	var worldMapDiameter = worldMap.getRadius() * 2;
 	
@@ -45,9 +62,31 @@ function drawMap(worldMap, canvasId) {
 		
 		map.beginPath();
 		
-		map.arc(xFactor * width, yFactor * height, 1, 0, 2 * Math.PI, true);
+		map.arc((xFactor * width) + (widthOffset / 2), (yFactor * height) + (heightOffset / 2), 1, 0, 2 * Math.PI, true);
 		
 		map.fill();
+		
+		map.closePath();
+	}
+	
+	if(drawDebug) {
+	
+		var levels = worldMap.getLevels();
+		
+		for(var levelIndex in levels) {
+			
+			var level = levels[levelIndex];
+			
+			var radius = level / worldMap.getRadius();
+
+			map.beginPath();
+		
+			map.arc((width + widthOffset) / 2, (height + heightOffset) / 2, radius * (width / 2), 0, 2 * Math.PI, true);
+		
+			map.closePath();
+			
+			map.stroke();
+		}
 	}
 }
 
@@ -56,6 +95,8 @@ function generateMap(steps) {
 	var cities = new Array();
 	
 	cities.push(new City(0,0));
+	
+	var levels = new Array();
 
 	var angleSteps = 6;
 
@@ -78,24 +119,35 @@ function generateMap(steps) {
 			cities.push(new City(xVal, yVal));			
 		}
 		
+		levels.push((step + 1) * 50);
+		
 		angleSteps = angleSteps * 2;
 	}
 	
-	return new WorldMap(cities, steps * 50);
+	return new WorldMap(cities, steps * 50, levels);
 }
 
-function WorldMap(citiesParam, radiusParam) {
+function WorldMap(citiesParam, radiusParam, levelsParam) {
 	
 	var cities = citiesParam;
 	
 	var radius = radiusParam;
 	
+	var levels = levelsParam;
+	
 	this.getCities = function() {
+
 		return cities;
 	}
 	
 	this.getRadius = function() {
+
 		return radius;
+	}
+	
+	this.getLevels = function() {
+
+		return levels;
 	}
 }
 
