@@ -69,7 +69,7 @@ function generateMap(steps) {
 			
 			var angle = angleStart + (Math.random() * angleIncrement);
 			
-			var distance = 10 + ((step * 40) * Math.random());
+			var distance = 10 + (50 * step) + (40 * Math.random());
 			
 			var xVal = distance * Math.cos(angle);
 			
