@@ -56,13 +56,11 @@ function drawMap(worldMap, canvasId, drawDebug) {
 		
 		var city = cities[cityIndex];
 		
-		var xFactor = (city.getX() + worldMap.getRadius()) / worldMapDiameter;
-		
-		var yFactor = (city.getY() + worldMap.getRadius()) / worldMapDiameter;
-		
+		var coordinate = convertWorldToCanvasCoordinate(city.getPosition(), worldMap, width, height);
+	
 		map.beginPath();
 		
-		map.arc((xFactor * width) + (widthOffset / 2), (yFactor * height) + (heightOffset / 2), 1, 0, 2 * Math.PI, true);
+		map.arc(coordinate.getX() + (widthOffset / 2), coordinate.getY() + (heightOffset / 2), 1, 0, 2 * Math.PI, true);
 		
 		map.fill();
 		
@@ -87,6 +85,27 @@ function drawMap(worldMap, canvasId, drawDebug) {
 			
 			map.stroke();
 		}
+		
+		var sections = worldMap.getSections();
+		
+		for(var sectionIndex in sections) {
+				
+			var section = sections[sectionIndex];
+			
+			map.beginPath();
+			
+			var firstCoordinate = convertWorldToCanvasCoordinate(section.getFirstPoint(), worldMap, width, height);
+			
+			var secondCoordinate = convertWorldToCanvasCoordinate(section.getSecondPoint(), worldMap, width, height);
+						
+			map.moveTo(firstCoordinate.getX(), firstCoordinate.getY());
+			
+			map.lineTo(secondCoordinate.getX(), secondCoordinate.getY());
+			
+			map.stroke();
+			
+			map.closePath();
+		}
 	}
 }
 
@@ -94,9 +113,11 @@ function generateMap(steps) {
 
 	var cities = new Array();
 	
-	cities.push(new City(0,0));
+	cities.push(new City(new Point(0,0)));
 	
 	var levels = new Array();
+	
+	var sections = new Array();
 
 	var angleSteps = 6;
 
@@ -116,24 +137,54 @@ function generateMap(steps) {
 			
 			var yVal = distance * Math.sin(angle);
 			
-			cities.push(new City(xVal, yVal));			
+			cities.push(new City(new Point(xVal, yVal)));
+			
+			sections.push(generateLine(angleStart, 10 + (50 * step), 50 * (step + 1)));			
 		}
+		
+		levels.push((step * 50) + 10);
 		
 		levels.push((step + 1) * 50);
 		
 		angleSteps = angleSteps * 2;
 	}
 	
-	return new WorldMap(cities, steps * 50, levels);
+	return new WorldMap(cities, steps * 50, levels, sections);
 }
 
-function WorldMap(citiesParam, radiusParam, levelsParam) {
+function generateLine(angle, startRadius, endRadius) {
+	
+	var x1Val = startRadius * Math.cos(angle);
+	
+	var y1Val = startRadius * Math.sin(angle);
+	
+	var x2Val = endRadius * Math.cos(angle);
+	
+	var y2Val = endRadius * Math.sin(angle);
+	
+	return new Line(new Point(x1Val, y1Val), new Point(x2Val, y2Val));
+}
+
+function convertWorldToCanvasCoordinate(coordinate, worldMap, width, height) {
+		
+	var worldMapDiameter = worldMap.getRadius() * 2;
+	
+	var xFactor = (coordinate.getX() + worldMap.getRadius()) / worldMapDiameter;
+		
+	var yFactor = (coordinate.getY() + worldMap.getRadius()) / worldMapDiameter;
+	
+	return new Point(width * xFactor, height * yFactor);		
+}
+
+function WorldMap(citiesParam, radiusParam, levelsParam, sectionsParam) {
 	
 	var cities = citiesParam;
 	
 	var radius = radiusParam;
 	
 	var levels = levelsParam;
+	
+	var sections = sectionsParam;
 	
 	this.getCities = function() {
 
@@ -149,19 +200,52 @@ function WorldMap(citiesParam, radiusParam, levelsParam) {
 
 		return levels;
 	}
+	
+	this.getSections = function() {
+	
+		return sections;
+	}
 }
 
-function City(xVal, yVal) {
+function City(positionParam) {
+	
+	var position = positionParam;
+	
+	this.getPosition = function() {
+		
+		return position;
+	}
+}
+
+function Line(firstPointParam, secondPointParam) {
+	
+	var firstPoint = firstPointParam;
+	
+	var secondPoint = secondPointParam;
+	
+	this.getFirstPoint = function() {
+		
+		return firstPoint;
+	}
+	
+	this.getSecondPoint = function() {
+		
+		return secondPoint;
+	}
+}
+
+function Point(xVal, yVal) {
 	
 	var x = xVal;
 	var y = yVal;
 	
 	this.getX = function() {
+		
 		return x;
 	}
 	
 	this.getY = function() {
+		
 		return y;
 	}
 }
-
