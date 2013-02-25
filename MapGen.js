@@ -109,7 +109,7 @@ function drawMap(worldMap, canvasId, drawDebug) {
 	}
 }
 
-function generateMap(steps) {
+function generateMap(steps, angleStepsParam, angleStepIncrease) {
 
 	var cities = new Array();
 	
@@ -118,12 +118,12 @@ function generateMap(steps) {
 	var levels = new Array();
 	
 	var sections = new Array();
-
-	var angleSteps = 6;
+	
+	var angleSteps = angleStepsParam;
 
 	for(var step = 0; step < steps; step++) {
 		
-		var angleIncrement = angleSteps / (2 * Math.PI);
+		var angleIncrement = (2.0 * Math.PI) / angleSteps;
 		
 		for(var angleStep = 0; angleStep < angleSteps; angleStep++) {
 			
@@ -146,7 +146,7 @@ function generateMap(steps) {
 		
 		levels.push((step + 1) * 50);
 		
-		angleSteps = angleSteps * 2;
+		angleSteps = angleSteps * angleStepIncrease;
 	}
 	
 	return new WorldMap(cities, steps * 50, levels, sections);

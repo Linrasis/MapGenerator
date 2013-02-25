@@ -1,13 +1,79 @@
 <html>
 <head>
-	<script src="MapGen.js">
+	<script src="MapGen.js"></script>
+	<script type="text/javascript">
+		var mapLevels = 2;
+		var angleSteps = 4;
+		var angleStepIncrease = 2;
+		var debugDrawing = false;
+		
+		function addLevel() {
+			mapLevels = mapLevels + 1;
+			redrawMap();
+		}
+		
+		function removeLevel() {
+			if(mapLevels > 0) {
+				mapLevels = mapLevels - 1;
+				redrawMap();
+			}
+		}
+		
+		function addStep() {
+			angleSteps = angleSteps + 1;
+			redrawMap();
+		}
+		
+		function removeStep() {
+			if(angleSteps > 0) {
+				angleSteps = angleSteps - 1;
+				redrawMap();
+			}
+		}
+		
+		function increaseStepFactor() {
+			angleStepIncrease = angleStepIncrease + 1;
+			redrawMap();
+		}
+		
+		function decreaseStepFactor() {
+			if(angleStepIncrease > 1) {
+				angleStepIncrease = angleStepIncrease - 1;
+				redrawMap();
+			}
+		}
+		
+		function toggleDebugging() {
+			debugDrawing = !debugDrawing;
+			redrawMap();
+		}
+		
+		function redrawMap() {
+			var canvas = document.getElementById('mapCanvas');
+			var context = canvas.getContext('2d');
+			
+			context.clearRect(0, 0, canvas.width, canvas.height);
+			
+			drawMap(generateMap(mapLevels, angleSteps, angleStepIncrease), "mapCanvas", debugDrawing);
+		}
 	</script>
 </head>
 <body>
-	<canvas id="mapCanvas" width="500px" height="500px"	style="border:1px solid #000000;">
+	<canvas id="mapCanvas" width="400px" height="400px"	style="border:1px solid #000000;">
 	</canvas>
 	<script>
-		drawMap(generateMap(3), "mapCanvas", false);
+		drawMap(generateMap(mapLevels, angleSteps, angleStepIncrease), "mapCanvas", debugDrawing);
 	</script>
+	<br/>
+	<a href="#" onclick="toggleDebugging()">Toggle Debugging</a>
+	<br/>
+	<a href="#" onclick="addLevel()">Add Level</a>
+	<a href="#" onclick="removeLevel()">Remove Level</a>
+	<br/>
+	<a href="#" onclick="addStep()">Add Step</a>
+	<a href="#" onclick="removeStep()">Remove Step</a>
+	<br/>
+	<a href="#" onclick="increaseStepFactor()">Increase Step Factor</a>
+	<a href="#" onclick="decreaseStepFactor()">Decrease Step Factor</a>
 </body>
 </html>
