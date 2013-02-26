@@ -23,7 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
  
-function drawMap(worldMap, canvasId, drawDebug) {
+function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 	
 	var map = document.getElementById(canvasId).getContext("2d");
 	
@@ -60,11 +60,16 @@ function drawMap(worldMap, canvasId, drawDebug) {
 	
 		map.beginPath();
 		
-		map.arc(coordinate.getX() + (widthOffset / 2), coordinate.getY() + (heightOffset / 2), 1, 0, 2 * Math.PI, true);
+		map.arc(coordinate.getX() + (widthOffset / 2), coordinate.getY() + (heightOffset / 2), 3, 0, 2 * Math.PI, true);
 		
 		map.fill();
 		
 		map.closePath();
+	}
+	
+	if(drawRoadsParam) {
+
+		drawRoads(worldMap, map, worldMap.getCities()[0]);
 	}
 	
 	if(drawDebug) {
@@ -109,47 +114,118 @@ function drawMap(worldMap, canvasId, drawDebug) {
 	}
 }
 
-function generateMap(steps, angleStepsParam, angleStepIncrease) {
+function drawRoads(worldMap, map, city) {
+
+	var width = map.canvas.width;
+	
+	var widthOffset = 0;
+	
+	var height = map.canvas.height;
+	
+	var heightOffset = 0;
+	
+	if(width > height) {
+		
+		widthOffset = width - height;
+		
+		width = height;
+		
+	} else if (height > width) {
+		
+		heightOffset = height - width;
+		
+		height = width;
+	}
+
+	var childCities = city.getChildCities();
+	
+	for(var childCityIndex in childCities) {
+		
+		var childCity = childCities[childCityIndex];
+		
+		map.beginPath();
+			
+		var firstCoordinate = convertWorldToCanvasCoordinate(city.getPosition(), worldMap, width, height);
+		
+		var secondCoordinate = convertWorldToCanvasCoordinate(childCity.getPosition(), worldMap, width, height);
+					
+		map.moveTo(firstCoordinate.getX(), firstCoordinate.getY());
+		
+		map.lineTo(secondCoordinate.getX(), secondCoordinate.getY());
+		
+		map.stroke();
+			
+		map.closePath();
+		
+		drawRoads(worldMap, map, childCity);
+	}
+}
+
+function generateMap(steps, angleSteps, angleStepIncrease) {
 
 	var cities = new Array();
 	
-	cities.push(new City(new Point(0,0)));
+	var centerCity = new City(new Point(0,0));
+	
+	cities.push(centerCity);
 	
 	var levels = new Array();
 	
 	var sections = new Array();
 	
-	var angleSteps = angleStepsParam;
-
-	for(var step = 0; step < steps; step++) {
-		
+	var worldMap = new WorldMap(cities, steps * 50, levels, sections);
+	
+	if(steps > 0) {
+	
 		var angleIncrement = (2.0 * Math.PI) / angleSteps;
 		
 		for(var angleStep = 0; angleStep < angleSteps; angleStep++) {
+		
+			var childCity = generateCity(worldMap, steps - 1, angleIncrement * angleStep, angleIncrement, 10, 50, angleStepIncrease);
 			
-			var angleStart = angleIncrement * angleStep;
-			
-			var angle = angleStart + (Math.random() * angleIncrement);
-			
-			var distance = 10 + (50 * step) + (40 * Math.random());
-			
-			var xVal = distance * Math.cos(angle);
-			
-			var yVal = distance * Math.sin(angle);
-			
-			cities.push(new City(new Point(xVal, yVal)));
-			
-			sections.push(generateLine(angleStart, 10 + (50 * step), 50 * (step + 1)));			
+			centerCity.getChildCities().push(childCity);
 		}
+	}
+
+	for(var step = 0; step < steps; step++) {
 		
 		levels.push((step * 50) + 10);
 		
 		levels.push((step + 1) * 50);
-		
-		angleSteps = angleSteps * angleStepIncrease;
 	}
 	
-	return new WorldMap(cities, steps * 50, levels, sections);
+	return worldMap;
+}
+
+function generateCity(worldMap, steps, angleStart, angleSize, minDistance, maxDistance, childCities) {
+
+	var angle = angleStart + (Math.random() * angleSize);
+			
+	var distance = minDistance + ( (maxDistance - minDistance) * Math.random() );
+			
+	var xVal = distance * Math.cos(angle);
+			
+	var yVal = distance * Math.sin(angle);
+	
+	var city = new City(new Point(xVal, yVal));
+			
+	worldMap.getCities().push(city);
+			
+	worldMap.getSections().push(generateLine(angleStart, minDistance, maxDistance));
+	
+	if(steps > 0) {
+	
+		var angleIncrement = angleSize / childCities;
+	
+		for(var childCityIndex = 0; childCityIndex < childCities; childCityIndex++) {
+			
+			var childCity = generateCity(worldMap, steps - 1, angleStart + (angleIncrement * childCityIndex), angleIncrement, maxDistance + 10, maxDistance + 50, childCities);
+			
+			city.getChildCities().push(childCity);
+		}
+	}
+	
+	return city;
 }
 
 function generateLine(angle, startRadius, endRadius) {
@@ -211,9 +287,16 @@ function City(positionParam) {
 	
 	var position = positionParam;
 	
+	var childCities = new Array();
+	
 	this.getPosition = function() {
 		
 		return position;
+	}
+	
+	this.getChildCities = function() {
+	
+		return childCities;
 	}
 }
 
