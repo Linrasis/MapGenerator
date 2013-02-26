@@ -25,7 +25,7 @@
 		}
 		
 		function removeStep() {
-			if(angleSteps > 0) {
+			if(angleSteps > 1) {
 				angleSteps = angleSteps - 1;
 				redrawMap();
 			}
@@ -49,6 +49,9 @@
 		}
 		
 		function redrawMap() {
+			
+			document.getElementById("values").innerHTML = "Levels: " + mapLevels + ", Initial Section Count: " + angleSteps + ", Section Increase Factor: " + angleStepIncrease;
+		
 			var canvas = document.getElementById('mapCanvas');
 			var context = canvas.getContext('2d');
 			
@@ -61,19 +64,21 @@
 <body>
 	<canvas id="mapCanvas" width="400px" height="400px"	style="border:1px solid #000000;">
 	</canvas>
-	<script>
-		drawMap(generateMap(mapLevels, angleSteps, angleStepIncrease), "mapCanvas", debugDrawing);
-	</script>
+	<div id="values"> </div>
 	<br/>
 	<a href="#" onclick="toggleDebugging()">Toggle Debugging</a>
 	<br/>
 	<a href="#" onclick="addLevel()">Add Level</a>
 	<a href="#" onclick="removeLevel()">Remove Level</a>
 	<br/>
-	<a href="#" onclick="addStep()">Add Step</a>
-	<a href="#" onclick="removeStep()">Remove Step</a>
+	<a href="#" onclick="addStep()">Add Initial Section</a>
+	<a href="#" onclick="removeStep()">Remove Initial Section</a>
 	<br/>
-	<a href="#" onclick="increaseStepFactor()">Increase Step Factor</a>
-	<a href="#" onclick="decreaseStepFactor()">Decrease Step Factor</a>
+	<a href="#" onclick="increaseStepFactor()">Increase Section Increase Factor</a>
+	<a href="#" onclick="decreaseStepFactor()">Decrease Section Increase Factor</a>
+	
+	<script>
+		redrawMap();
+	</script>
 </body>
 </html>
