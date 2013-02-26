@@ -180,6 +180,11 @@ function generateMap(steps, angleSteps, angleStepIncrease) {
 function generateCity(worldMap, steps, angleStart, angleSize, minDistance, maxDistance, childCities) {
 
 	var angle = angleStart + (Math.random() * angleSize);
+	
+	if(worldMap.getRadius() < maxDistance) {
+	
+		worldMap.setRadius(maxDistance);
+	}
 			
 	var distance = minDistance + ( (maxDistance - minDistance) * Math.random() );
 			
@@ -209,7 +214,7 @@ function generateCity(worldMap, steps, angleStart, angleSize, minDistance, maxDi
 	
 		for(var childCityIndex = 0; childCityIndex < childCities; childCityIndex++) {
 			
-			var childCity = generateCity(worldMap, steps - 1, angleStart + (angleIncrement * childCityIndex), angleIncrement, maxDistance + 10, maxDistance + 50, childCities);
+			var childCity = generateCity(worldMap, steps - 1, angleStart + (angleIncrement * childCityIndex), angleIncrement, maxDistance * 1.1, maxDistance * 1.75, childCities);
 			
 			city.getChildCities().push(childCity);
 		}
@@ -259,6 +264,11 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 	this.getRadius = function() {
 
 		return radius;
+	}
+	
+	this.setRadius = function(radiusParam) {
+	
+		radius = radiusParam;
 	}
 
 	this.getSections = function() {
