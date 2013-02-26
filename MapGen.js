@@ -48,50 +48,13 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 		height = width;
 	}
 	
-	var worldMapDiameter = worldMap.getRadius() * 2;
-	
-	var cities = worldMap.getCities();
-		
-	for(var cityIndex in cities) {
-		
-		var city = cities[cityIndex];
-		
-		var coordinate = convertWorldToCanvasCoordinate(city.getPosition(), worldMap, width, height);
-	
-		map.beginPath();
-		
-		map.arc(coordinate.getX() + (widthOffset / 2), coordinate.getY() + (heightOffset / 2), 3, 0, 2 * Math.PI, true);
-		
-		map.fill();
-		
-		map.closePath();
-	}
-	
-	if(drawRoadsParam) {
-
-		drawRoads(worldMap, map, worldMap.getCities()[0]);
-	}
+	map.save();
 	
 	if(drawDebug) {
-	
-		var levels = worldMap.getLevels();
-		
-		for(var levelIndex in levels) {
-			
-			var level = levels[levelIndex];
-			
-			var radius = level / worldMap.getRadius();
 
-			map.beginPath();
-		
-			map.arc((width + widthOffset) / 2, (height + heightOffset) / 2, radius * (width / 2), 0, 2 * Math.PI, true);
-		
-			map.closePath();
-			
-			map.stroke();
-		}
-		
 		var sections = worldMap.getSections();
+		
+		map.strokeStyle = '#c2c2c2';
 		
 		for(var sectionIndex in sections) {
 				
@@ -111,6 +74,30 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 			
 			map.closePath();
 		}
+	}
+	
+	map.restore();
+	
+	var cities = worldMap.getCities();	
+		
+	for(var cityIndex in cities) {
+		
+		var city = cities[cityIndex];
+		
+		var coordinate = convertWorldToCanvasCoordinate(city.getPosition(), worldMap, width, height);
+	
+		map.beginPath();
+		
+		map.arc(coordinate.getX() + (widthOffset / 2), coordinate.getY() + (heightOffset / 2), 3, 0, 2 * Math.PI, true);
+		
+		map.fill();
+		
+		map.closePath();
+	}
+	
+	if(drawRoadsParam) {
+
+		drawRoads(worldMap, map, worldMap.getCities()[0]);
 	}
 }
 
@@ -148,6 +135,8 @@ function drawRoads(worldMap, map, city) {
 		var firstCoordinate = convertWorldToCanvasCoordinate(city.getPosition(), worldMap, width, height);
 		
 		var secondCoordinate = convertWorldToCanvasCoordinate(childCity.getPosition(), worldMap, width, height);
+		
+		map.lineWidth = 1;
 					
 		map.moveTo(firstCoordinate.getX(), firstCoordinate.getY());
 		
@@ -169,11 +158,9 @@ function generateMap(steps, angleSteps, angleStepIncrease) {
 	
 	cities.push(centerCity);
 	
-	var levels = new Array();
-	
 	var sections = new Array();
 	
-	var worldMap = new WorldMap(cities, steps * 50, levels, sections);
+	var worldMap = new WorldMap(cities, steps * 50, sections);
 	
 	if(steps > 0) {
 	
@@ -185,13 +172,6 @@ function generateMap(steps, angleSteps, angleStepIncrease) {
 			
 			centerCity.getChildCities().push(childCity);
 		}
-	}
-
-	for(var step = 0; step < steps; step++) {
-		
-		levels.push((step * 50) + 10);
-		
-		levels.push((step + 1) * 50);
 	}
 	
 	return worldMap;
@@ -210,8 +190,18 @@ function generateCity(worldMap, steps, angleStart, angleSize, minDistance, maxDi
 	var city = new City(new Point(xVal, yVal));
 			
 	worldMap.getCities().push(city);
+	
+	var sectionLine = generateLine(angleStart, minDistance, maxDistance);
+	
+	var sectionBottomLine = new Line(sectionLine.getFirstPoint(), generatePoint(angleStart + angleSize, minDistance));
+	
+	var sectionTopLine = new Line(sectionLine.getSecondPoint(), generatePoint(angleStart + angleSize, maxDistance));
 			
-	worldMap.getSections().push(generateLine(angleStart, minDistance, maxDistance));
+	worldMap.getSections().push(sectionLine);
+	
+	worldMap.getSections().push(sectionBottomLine);
+	
+	worldMap.getSections().push(sectionTopLine);
 	
 	if(steps > 0) {
 	
@@ -230,15 +220,16 @@ function generateCity(worldMap, steps, angleStart, angleSize, minDistance, maxDi
 
 function generateLine(angle, startRadius, endRadius) {
 	
-	var x1Val = startRadius * Math.cos(angle);
+	return new Line(generatePoint(angle, startRadius), generatePoint(angle, endRadius));
+}
+
+function generatePoint(angle, distance) {
+
+	var x = distance * Math.cos(angle);
 	
-	var y1Val = startRadius * Math.sin(angle);
+	var y = distance * Math.sin(angle);
 	
-	var x2Val = endRadius * Math.cos(angle);
-	
-	var y2Val = endRadius * Math.sin(angle);
-	
-	return new Line(new Point(x1Val, y1Val), new Point(x2Val, y2Val));
+	return new Point(x, y);	
 }
 
 function convertWorldToCanvasCoordinate(coordinate, worldMap, width, height) {
@@ -252,13 +243,11 @@ function convertWorldToCanvasCoordinate(coordinate, worldMap, width, height) {
 	return new Point(width * xFactor, height * yFactor);		
 }
 
-function WorldMap(citiesParam, radiusParam, levelsParam, sectionsParam) {
+function WorldMap(citiesParam, radiusParam, sectionsParam) {
 	
 	var cities = citiesParam;
 	
 	var radius = radiusParam;
-	
-	var levels = levelsParam;
 	
 	var sections = sectionsParam;
 	
@@ -271,12 +260,7 @@ function WorldMap(citiesParam, radiusParam, levelsParam, sectionsParam) {
 
 		return radius;
 	}
-	
-	this.getLevels = function() {
 
-		return levels;
-	}
-	
 	this.getSections = function() {
 	
 		return sections;
