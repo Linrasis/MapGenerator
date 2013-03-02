@@ -194,7 +194,7 @@ function generateCity(worldMap, steps, angleStart, angleSize, minDistance, maxDi
 	
 	var city = new City(new Point(xVal, yVal));
 			
-	worldMap.getCities().push(city);
+	worldMap.addCity(city);
 	
 	var sectionLine = generateLine(angleStart, minDistance, maxDistance);
 	
@@ -256,6 +256,28 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 	
 	var sections = sectionsParam;
 	
+	var quadTree = new QuadTree(new Point(-radius,-radius), new Point(radius,radius));
+	
+	var id = 1;
+
+	for(var cityIndex in cities) {
+	
+		var city = cities[cityIndex];
+		
+		quadTree.addItem(city, id, city.getPosition());
+		
+		id += 1;
+	}
+	
+	this.addCity = function(cityParam) {
+	
+		cities.push(cityParam);
+		
+		quadTree.addItem(cityParam, id, cityParam.getPosition());
+		
+		id += 1;
+	}
+	
 	this.getCities = function() {
 
 		return cities;
@@ -294,6 +316,193 @@ function City(positionParam) {
 	}
 }
 
+function QuadTree(c1Param, c2Param) {
+
+	var root = new Quad(c1Param, c2Param, 3);
+	
+	function Item(itemValueParam, idParam, positionParam) {
+	
+		var itemValue = itemValueParam;
+		
+		var id = idParam;
+		
+		var position = positionParam;
+		
+		this.getItemValue = function() {
+		
+			return itemValue;
+		}
+		
+		this.getId = function() {
+			
+			return id;
+		}
+		
+		this.getPosition = function() {
+		
+			return position;
+		}	
+	}
+	
+	function Quad(c1Param, c2Param, itemLimitParam) {
+	
+		var c1 = c1Param;
+		
+		var c2 = c2Param;
+		
+		var items = new Array(itemLimitParam);
+		
+		var quads = null;
+		
+		this.inRange = function(pointParam) {
+		
+			if(pointParam.getX() >= c1.getX() && pointParam.getX() < c2.getX()) {
+			
+				if(pointParam.getY() >= c1.getY() && pointParam.getY() < c2.getY()) {
+				
+					return true;
+				}
+			}
+			
+			return false;
+		}
+	
+		this.addItem = function(itemParam) {
+		
+			if(this.inRange(itemParam.getPosition())) {
+				
+				if(items !== null) {
+				
+					for(var itemIndex = 0; itemIndex < items.length; itemIndex++) {
+					
+						if (typeof items[itemIndex] === 'undefined' || items[itemIndex] === null) {
+						
+							items[itemIndex] = itemParam;
+							
+							return true;
+						}
+					}
+					
+					quads = new Array(4);
+					
+					var midX = c1.getX() + ((c2.getX() - c1.getX()) / 2);
+					
+					var midY = c1.getY() + ((c2.getY() - c1.getY()) / 2);
+					
+					quads[0] = new Quad(c1, new Point(midX, midY), itemLimitParam);
+					
+					quads[1] = new Quad(new Point(midX, c1.getY()), new Point(c2.getX(), midY), itemLimitParam);
+					
+					quads[2] = new Quad(new Point(c1.getX(), midY), new Point(midX, c2.getY()), itemLimitParam);
+					
+					quads[3] = new Quad(new Point(midX, midY), c2, itemLimitParam);
+					
+					for(var itemIndex in items) {
+					
+						for(var quadIndex in quads) {
+					
+							var addResult = quads[quadIndex].addItem(items[itemIndex]);
+							
+							if(addResult == true) {
+							
+								break;
+							}				
+						}
+					}
+					
+					items.length = 0;
+					
+					items = null;
+				}
+				
+				for(var quadIndex in quads) {
+				
+					var addResult = quads[quadIndex].addItem(itemParam);
+					
+					if(addResult == true) {
+					
+						return true;
+					}				
+				}
+			}
+			
+			return false;
+		}
+	}
+	
+	this.addItem = function(itemValueParam, idParam, positionParam) {
+	
+		var newItem = new Item(itemValueParam, idParam, positionParam);
+		
+		var returnResult = root.addItem(newItem);
+		
+		if(!returnResult) {
+		
+			throw new Error("Item could not be added to quadtree: " + itemValueParam + ", " + idParam + ", (" + positionParam.getX() + ", " + positionParam.getY() + ")");
+		}
+	}
+	
+	function removeItem(idParam, positionParam) {
+	
+	}
+}
+
+function Rectangle(topLeftCornerParam, bottomRightCornerParam) {
+	
+	var topLeftCorner = topLeftCornerParam;
+	
+	var bottomRightCorner = bottomRightCornerParam;
+	
+	this.getTopLeftCorner = function() {
+		
+		return topLeftCorner;
+	}
+	
+	this.getBottomRightCorner = function() {
+		
+		return bottomRightCorner;
+	}
+	
+	this.intersects = function(shape) {
+	
+		if(shape instanceof Circle) {
+		
+			return false;
+		
+		} else if (shape instanceof Point) {
+		
+			if(pointParam.getX() >= topLeftCorner.getX() && pointParam.getX() < bottomRightCorner.getX()) {
+			
+				if(pointParam.getY() >= topLeftCorner.getY() && pointparam.getY() < bottomRightCorner.getY()) {
+				
+					return true;
+				}
+			}
+			
+			return false;
+		}
+		
+		throw new Error("Unknown shape object");
+	}
+}
+
+function Circle(centerPointParam, radiusParam) {
+
+	var centerPoint = centerPointParam;
+	
+	var radius = radiusParam;
+	
+	this.getCenterPoint = function() {
+		
+		return centerPoint;
+	}
+	
+	this.getRadius = function() {
+		
+		return radius;
+	}
+}
+
 function Line(firstPointParam, secondPointParam) {
 	
 	var firstPoint = firstPointParam;
@@ -314,6 +523,7 @@ function Line(firstPointParam, secondPointParam) {
 function Point(xVal, yVal) {
 	
 	var x = xVal;
+	
 	var y = yVal;
 	
 	this.getX = function() {
