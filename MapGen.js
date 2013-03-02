@@ -399,14 +399,21 @@ function QuadTree(c1Param, c2Param) {
 					
 					for(var itemIndex in items) {
 					
+						var addResult;
+					
 						for(var quadIndex in quads) {
 					
-							var addResult = quads[quadIndex].addItem(items[itemIndex]);
+							addResult = quads[quadIndex].addItem(items[itemIndex]);
 							
 							if(addResult == true) {
 							
 								break;
 							}				
+						}
+						
+						if(!addResult) {
+						
+							throw new Error("Could not split quad, item could not be added");
 						}
 					}
 					
@@ -415,14 +422,21 @@ function QuadTree(c1Param, c2Param) {
 					items = null;
 				}
 				
+				var addResult;
+				
 				for(var quadIndex in quads) {
 				
-					var addResult = quads[quadIndex].addItem(itemParam);
+					addResult = quads[quadIndex].addItem(itemParam);
 					
 					if(addResult == true) {
 					
 						return true;
 					}				
+				}
+				
+				if(!addResult) {
+						
+					throw new Error("Could not add item, was in parent quad but does not fit in to child quad");
 				}
 			}
 			
