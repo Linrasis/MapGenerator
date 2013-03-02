@@ -291,6 +291,19 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 	this.setRadius = function(radiusParam) {
 	
 		radius = radiusParam;
+		
+		quadTree = new QuadTree(new Point(-radius,-radius), new Point(radius,radius));
+		
+		id = 1;
+
+		for(var cityIndex in cities) {
+		
+			var city = cities[cityIndex];
+			
+			quadTree.addItem(city, id, city.getPosition());
+			
+			id += 1;
+		}
 	}
 
 	this.getSections = function() {
