@@ -154,7 +154,7 @@ function generateMap(steps, angleSteps, angleStepIncrease) {
 
 	var cities = new Array();
 	
-	var centerCity = new City(new Point(0,0));
+	var centerCity = new City(getRandomCityName(), new Point(0,0));
 	
 	cities.push(centerCity);
 	
@@ -192,7 +192,7 @@ function generateCity(worldMap, steps, angleStart, angleSize, minDistance, maxDi
 			
 	var yVal = distance * Math.sin(angle);
 	
-	var city = new City(new Point(xVal, yVal));
+	var city = new City(getRandomCityName(), new Point(xVal, yVal));
 			
 	worldMap.addCity(city);
 	
@@ -248,6 +248,29 @@ function convertWorldToCanvasCoordinate(coordinate, worldMap, width, height) {
 	return new Point(width * xFactor, height * yFactor);		
 }
 
+function convertCanvasToWorldCoordinate(coordinate, worldMap, width, height) {
+		
+	var worldMapDiameter = worldMap.getRadius() * 2;
+	
+	var xFactor = coordinate.getX() / width;
+	
+	var yFactor = coordinate.getY() / height;
+		
+	return new Point((worldMapDiameter * xFactor) - worldMap.getRadius(), (worldMapDiameter * yFactor) - worldMap.getRadius());		
+}
+
+ var cityNames = ["Abingdon","Accrington","Acle","Acton","Adlington","Alcester",
+				  "Aldeburgh","Aldershot","Alford","Alfreton","Alnwick","Alsager",
+				  "Alston","Alton","Altrincham","Amble","Ambleside","Amersham",
+				  "Amesbury","Ampthill","Andover","Arlesey","Arundel"];
+ 
+ function getRandomCityName() {
+	 
+	 var randomIndex = Math.random() * cityNames.length;
+	 
+	 return cityNames[Math.floor(randomIndex)];
+ }
+
 function WorldMap(citiesParam, radiusParam, sectionsParam) {
 	
 	var cities = citiesParam;
@@ -278,11 +301,18 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 		id += 1;
 	}
 	
-	this.getCities = function() {
+	this.getCities = function(shape) {
+		
+		if(typeof shape === 'undefined' || shape === null) {
 
-		return cities;
+			return cities;
+			
+		} else {
+			
+			return quadTree.getItems(shape);			
+		}
 	}
-	
+		
 	this.getRadius = function() {
 
 		return radius;
@@ -312,11 +342,18 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 	}
 }
 
-function City(positionParam) {
+function City(nameParam, positionParam) {
+	
+	var name = nameParam;
 	
 	var position = positionParam;
 	
 	var childCities = new Array();
+	
+	this.getName = function() {
+		
+		return name;
+	}
 	
 	this.getPosition = function() {
 		
@@ -359,9 +396,7 @@ function QuadTree(c1Param, c2Param) {
 	
 	function Quad(c1Param, c2Param, itemLimitParam) {
 	
-		var c1 = c1Param;
-		
-		var c2 = c2Param;
+		var quadRect = new Rectangle(c1Param, c2Param);
 		
 		var items = new Array(itemLimitParam);
 		
@@ -369,9 +404,9 @@ function QuadTree(c1Param, c2Param) {
 		
 		this.inRange = function(pointParam) {
 		
-			if(pointParam.getX() >= c1.getX() && pointParam.getX() < c2.getX()) {
+			if(pointParam.getX() >= quadRect.getTopLeftCorner().getX() && pointParam.getX() < quadRect.getBottomRightCorner().getX()) {
 			
-				if(pointParam.getY() >= c1.getY() && pointParam.getY() < c2.getY()) {
+				if(pointParam.getY() >= quadRect.getTopLeftCorner().getY() && pointParam.getY() < quadRect.getBottomRightCorner().getY()) {
 				
 					return true;
 				}
@@ -391,24 +426,24 @@ function QuadTree(c1Param, c2Param) {
 						if (typeof items[itemIndex] === 'undefined' || items[itemIndex] === null) {
 						
 							items[itemIndex] = itemParam;
-							
+														
 							return true;
 						}
 					}
 					
 					quads = new Array(4);
 					
-					var midX = c1.getX() + ((c2.getX() - c1.getX()) / 2);
+					var midX = quadRect.getTopLeftCorner().getX() + ((quadRect.getBottomRightCorner().getX() - quadRect.getTopLeftCorner().getX()) / 2);
 					
-					var midY = c1.getY() + ((c2.getY() - c1.getY()) / 2);
+					var midY = quadRect.getTopLeftCorner().getY() + ((quadRect.getBottomRightCorner().getY() - quadRect.getTopLeftCorner().getY()) / 2);
 					
-					quads[0] = new Quad(c1, new Point(midX, midY), itemLimitParam);
+					quads[0] = new Quad(quadRect.getTopLeftCorner(), new Point(midX, midY), itemLimitParam);
 					
-					quads[1] = new Quad(new Point(midX, c1.getY()), new Point(c2.getX(), midY), itemLimitParam);
+					quads[1] = new Quad(new Point(midX, quadRect.getTopLeftCorner().getY()), new Point(quadRect.getBottomRightCorner().getX(), midY), itemLimitParam);
 					
-					quads[2] = new Quad(new Point(c1.getX(), midY), new Point(midX, c2.getY()), itemLimitParam);
+					quads[2] = new Quad(new Point(quadRect.getTopLeftCorner().getX(), midY), new Point(midX, quadRect.getBottomRightCorner().getY()), itemLimitParam);
 					
-					quads[3] = new Quad(new Point(midX, midY), c2, itemLimitParam);
+					quads[3] = new Quad(new Point(midX, midY), quadRect.getBottomRightCorner(), itemLimitParam);
 					
 					for(var itemIndex in items) {
 					
@@ -455,6 +490,40 @@ function QuadTree(c1Param, c2Param) {
 			
 			return false;
 		}
+		
+		this.getItems = function(shape) {
+			
+			var returnItems = new Array();
+						
+			if(items !== null && items.length > 0) {
+
+				for(var itemIndex = 0; itemIndex < items.length; itemIndex++) {
+
+					if (typeof items[itemIndex] !== 'undefined' && items[itemIndex] !== null) {
+						
+						var item = items[itemIndex];
+						
+						if(shape.intersects(item.getPosition())) {
+							
+							returnItems.push(item.getItemValue());
+						}
+					}
+				}
+				
+			} else if (quads !== null && quads.length > 0) {
+				
+				for (var quadIndex = 0; quadIndex < quads.length; quadIndex++) {
+					
+					var quad = quads[quadIndex];
+					
+					var array = quad.getItems(shape);
+					
+					returnItems = returnItems.concat(array);
+				}
+			}
+			
+			return returnItems;
+		}
 	}
 	
 	this.addItem = function(itemValueParam, idParam, positionParam) {
@@ -472,13 +541,22 @@ function QuadTree(c1Param, c2Param) {
 	function removeItem(idParam, positionParam) {
 	
 	}
+	
+	this.getItems = function(shape) {
+		
+		return root.getItems(shape);
+	}
 }
 
 function Rectangle(topLeftCornerParam, bottomRightCornerParam) {
 	
 	var topLeftCorner = topLeftCornerParam;
-	
+
 	var bottomRightCorner = bottomRightCornerParam;
+
+	var topRightCorner = null, bottomLeftCorner = null;
+	
+	var lines = null;
 	
 	this.getTopLeftCorner = function() {
 		
@@ -490,10 +568,72 @@ function Rectangle(topLeftCornerParam, bottomRightCornerParam) {
 		return bottomRightCorner;
 	}
 	
+	var getTopRightCorner = function() {
+		
+		if(topRightCorner === null) {
+			
+			topRightCorner = new Point(getBottomRightCorner().getX(), getTopLeftCorner().getY());
+		}
+		
+		return topRightCorner;
+	}
+	
+	var getBottomLeftCorner = function() {
+		
+		if(bottomLeftCorner === null) {
+			
+			bottomLeftCorner = new Point(getTopLeftCorner().getX(), getBottomRightCorner().getY());
+		}
+		
+		return bottomLeftCorner;
+	}
+	
+	var getLines = function() {
+		
+		if(lines === null) {
+			
+			lines = new Array(4);
+			
+			lines[0] = new Line(getTopLeftCorner(), getTopRightCorner());
+					
+			lines[1] = new Line(getTopRightCorner(), getBottomRightCorner());
+					
+			lines[2] = new Line(getBottomRightCorner(), getBottomLeftCorner());
+					
+			lines[3] = new Line(getBottomLeftCorner(), getTopLeftCorner());
+		}
+		
+		return lines;
+	}
+	
 	this.intersects = function(shape) {
 	
 		if(shape instanceof Circle) {
-		
+			
+			if (this.intersects(shape.getCenter())) {
+				
+				return true;
+				
+			} else {
+				
+				var lines = getLines();
+				
+				for(var lineIndex in lines) {
+					
+					var line = lines[lineIndex];
+					
+					var point = line.projectPoint(shape.getCenter());
+					
+					if(point != null) {
+						
+						if(shape.intersects(point)) {
+							
+							return true;
+						}					
+					}
+				}			
+			}
+					
 			return false;
 		
 		} else if (shape instanceof Point) {
@@ -515,18 +655,41 @@ function Rectangle(topLeftCornerParam, bottomRightCornerParam) {
 
 function Circle(centerPointParam, radiusParam) {
 
-	var centerPoint = centerPointParam;
+	var center = centerPointParam;
 	
 	var radius = radiusParam;
 	
-	this.getCenterPoint = function() {
+	this.getCenter = function() {
 		
-		return centerPoint;
+		return center;
 	}
 	
 	this.getRadius = function() {
 		
 		return radius;
+	}
+	
+	this.intersects = function(shape) {
+		
+		if(shape instanceof Point) {
+			
+			var distance = shape.distance(this.getCenter());
+			
+			if(distance <= this.getRadius()) {
+				
+				return true;
+				
+			} else {
+				
+				return false;
+			}
+			
+		} else if (shape instanceof Rectangle) {
+			
+			return shape.intersects(this);
+		}
+		
+		throw new Error("Unknown shape object");
 	}
 }
 
@@ -535,6 +698,8 @@ function Line(firstPointParam, secondPointParam) {
 	var firstPoint = firstPointParam;
 	
 	var secondPoint = secondPointParam;
+	
+	var vector = null;
 	
 	this.getFirstPoint = function() {
 		
@@ -545,13 +710,130 @@ function Line(firstPointParam, secondPointParam) {
 		
 		return secondPoint;
 	}
+	
+	var getVector = function() {
+		
+		if(vector === null) {
+			
+			vector = new Vector(firstPoint, secondPoint);
+		}
+		
+		return vector;
+	}
+	
+	this.projectPoint = function(point) {
+		
+		var pointVector = new Vector(firstPoint, point);
+		
+		var lineVector = getVector();
+		
+		var projectVector = lineVector.projectVector(pointVector);
+		
+		if(lineVector.getUnitVector().getI() == projectVector.getUnitVector().getI()) {
+			
+			if(lineVector.getUnitVector().getJ() == projectVector.getUnitVector().getJ()) {
+			
+				if(projectVector.getMagnitude() <= lineVector.getMagnitude()) {
+					
+					return new Point(firstPoint, projectVector);
+				}
+			}
+		}
+		
+		return null;	
+	}
 }
 
-function Point(xVal, yVal) {
+function Vector(firstParam, secondParam) {
 	
-	var x = xVal;
+	var i, j;
+		
+	if(firstParam instanceof Point && secondParam instanceof Point) {
+
+		i = secondParam.getX() - firstParam.getX();
+		
+		j = secondParam.getY() - firstParam.getY();
+		
+	} else if (secondParam instanceof Vector) {
+		
+		i = firstParam * secondParam.getI();
+		
+		j = firstParam * secondParam.getJ();
+		
+	} else {
+		
+		i = firstParam;
+		
+		j = secondParam;
+	}
 	
-	var y = yVal;
+	var magnitude = null;
+	
+	this.getI = function() {
+		
+		return i;
+	}
+	
+	this.getJ = function() {
+		
+		return j;
+	}
+	
+	this.getMagnitude = function() {
+		
+		if(magnitude === null) {
+			
+			magnitude = Math.sqrt(Math.pow(i, 2) + Math.pow(j, 2));
+		}
+		
+		return magnitude;
+	}
+	
+	this.getUnitVector = function() {
+		
+		var magnitude = getMagnitude();
+		
+		if(magnitude == 1) {
+			
+			return this;
+			
+		} else {
+			
+			return new Vector(i / magnitude, j / magnitude);
+		}		
+	}
+	
+	this.dotProduct = function(secondVector) {
+		
+		return i * secondVector.getI() + j * secondVector.getJ();
+	}
+	
+	this.projectVector = function(vector) {
+				
+		var unitVector = getUnitVector();
+		
+		var scalar = unitVector.dotProduct(vector);
+		
+		return new Vector(scalar, unitVector);
+	}
+}
+
+function Point(firstParam, secondParam) {
+	
+	var x, y;
+	
+	if(firstParam instanceof Point && secondParam instanceof Vector) {
+		
+		x = firstParam.getX() + secondParam.getI();
+		
+		y = firstParam.getY() + secondParam.getJ();
+		
+	} else {
+		
+		x = firstParam;
+		
+		y = secondParam;
+	}
 	
 	this.getX = function() {
 		
@@ -561,5 +843,14 @@ function Point(xVal, yVal) {
 	this.getY = function() {
 		
 		return y;
+	}
+	
+	this.distance = function(secondPoint) {
+		
+		var xDiff = secondPoint.getX() - this.getX();
+		
+		var yDiff = secondPoint.getY() - this.getY();
+		
+		return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
 	}
 }

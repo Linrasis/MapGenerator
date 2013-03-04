@@ -6,6 +6,7 @@
 		var angleSteps = 4;
 		var angleStepIncrease = 2;
 		var debugDrawing = false;
+		var worldMap;
 		
 		function addLevel() {
 			mapLevels = mapLevels + 1;
@@ -57,11 +58,15 @@
 			
 			context.clearRect(0, 0, canvas.width, canvas.height);
 			
-			drawMap(generateMap(mapLevels, angleSteps, angleStepIncrease), "mapCanvas", true, debugDrawing);
+			worldMap = generateMap(mapLevels, angleSteps, angleStepIncrease);
+			
+			drawMap(worldMap, "mapCanvas", true, debugDrawing);
 		}
 	</script>
+	<link rel="stylesheet" type="text/css" href="MapGen.css">
 </head>
 <body>
+	<div id="mapOverTooltip">Hello World</div>
 	<canvas id="mapCanvas" width="400px" height="400px"	style="border:1px solid #000000;">
 	</canvas>
 	<div id="values"> </div>
@@ -79,6 +84,52 @@
 	
 	<script>
 		redrawMap();
+		
+		function getMousePos(canvas, evt) {
+			var rect = canvas.getBoundingClientRect();
+			return {
+			  x: evt.clientX - rect.left,
+			  y: evt.clientY - rect.top
+			};
+		}
+		
+		var toolTip = document.getElementById('mapOverTooltip');
+		
+		var canvas = document.getElementById('mapCanvas');
+		var context = canvas.getContext('2d');
+
+		canvas.addEventListener('mousemove', function(evt) {
+			var mousePos = getMousePos(canvas, evt);
+			
+			var point = convertCanvasToWorldCoordinate(new Point(mousePos.x, mousePos.y), worldMap, canvas.width, canvas.height);
+			
+			var cities = worldMap.getCities(new Circle(point, 10));
+			
+			if(cities.length > 0) {
+			
+				var cityHtml = "";
+				
+				for(var cityIndex in cities) {
+					
+					var city = cities[cityIndex];
+					
+					cityHtml += "City: " + city.getName();
+					
+					cityHtml += "<br/>";
+				}
+				
+				toolTip.innerHTML = cityHtml;
+				
+				toolTip.style.left = (evt.clientX + 15) + "px";
+				toolTip.style.top = evt.clientY + "px";
+				toolTip.style.display = "block";
+				
+			} else {
+				
+				toolTip.style.display = "none";
+			}
+			
+		}, false);
 	</script>
 </body>
 </html>
