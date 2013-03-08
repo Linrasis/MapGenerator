@@ -1,0 +1,7 @@
+#mapOverTooltip {
+	position: absolute;
+	display: none;
+	background-color: #ffffff;
+	border: solid 1px #000000;
+	padding: 3px;
+}
