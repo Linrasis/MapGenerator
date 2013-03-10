@@ -10,42 +10,51 @@
 		
 		function addLevel() {
 			mapLevels = mapLevels + 1;
-			redrawMap();
+			createMap();
 		}
 		
 		function removeLevel() {
 			if(mapLevels > 0) {
 				mapLevels = mapLevels - 1;
-				redrawMap();
+				createMap();
 			}
 		}
 		
 		function addStep() {
 			angleSteps = angleSteps + 1;
-			redrawMap();
+			createMap();
 		}
 		
 		function removeStep() {
 			if(angleSteps > 1) {
 				angleSteps = angleSteps - 1;
-				redrawMap();
+				createMap();
 			}
 		}
 		
 		function increaseStepFactor() {
 			angleStepIncrease = angleStepIncrease + 1;
-			redrawMap();
+			createMap();
 		}
 		
 		function decreaseStepFactor() {
 			if(angleStepIncrease > 1) {
 				angleStepIncrease = angleStepIncrease - 1;
-				redrawMap();
+				createMap();
 			}
 		}
 		
 		function toggleDebugging() {
 			debugDrawing = !debugDrawing;
+			redrawMap();
+		}
+		
+		function createMap() {
+			
+			worldMap = generateMap(mapLevels, angleSteps, angleStepIncrease);
+			
+			document.getElementById("version").innerHTML = "MapGenerator Version: " + worldMap.getVersion();
+			
 			redrawMap();
 		}
 				
@@ -58,10 +67,6 @@
 			
 			context.clearRect(0, 0, canvas.width, canvas.height);
 			
-			worldMap = generateMap(mapLevels, angleSteps, angleStepIncrease);
-			
-			document.getElementById("version").innerHTML = "MapGenerator Version: " + worldMap.getVersion();
-			
 			drawMap(worldMap, "mapCanvas", true, debugDrawing);
 		}
 	</script>
@@ -73,9 +78,9 @@
 	</canvas>
 	<div id="values"></div>
 	<br/>
-	<a href="#" onclick="redrawMap()">Create New Map</a>
-	<br/>
 	<a href="#" onclick="toggleDebugging()">Toggle Debugging</a>
+	<br/><br/>
+	<a href="#" onclick="createMap()">Create New Map</a>
 	<br/>
 	<a href="#" onclick="addLevel()">Add Level</a>
 	<a href="#" onclick="removeLevel()">Remove Level</a>
@@ -89,7 +94,7 @@
 	<div id="version"></div>
 	
 	<script>
-		redrawMap();
+		createMap();
 		
 		function getMousePos(canvas, evt) {
 			var rect = canvas.getBoundingClientRect();
