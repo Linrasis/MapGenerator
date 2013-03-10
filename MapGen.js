@@ -62,7 +62,21 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 			
 			var yRatio = y / height;
 			
-			var value = terrain[Math.floor(xRatio * terrain.length)][Math.floor(yRatio * terrain.length)];
+			var terrainWidth = terrain.length - 1;
+			
+			var minX = Math.floor(xRatio * terrainWidth), maxX = Math.floor(xRatio * terrainWidth) + 1;
+	
+			var minY = Math.floor(yRatio * terrainWidth), maxY = Math.floor(yRatio * terrainWidth) + 1;
+
+			var xVal = xRatio * terrainWidth, yVal = yRatio * terrainWidth;
+
+			var value = ((maxX - xVal)*(maxY - yVal))*terrain[minX][minY];
+			
+			value = value + ((xVal - minX)*(maxY - yVal))*terrain[maxX][minY];
+			
+			value = value + ((maxX - xVal)*(yVal - minY))*terrain[minX][maxY];
+			
+			value = value + ((xVal - minX)*(yVal - minY))*terrain[maxX][maxY];
 			
 			if(value < 0) {
 				
@@ -511,7 +525,7 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 	
 	this.getVersion = function() {
 		
-		return "0.1";
+		return "0.2";
 	}
 }
 
