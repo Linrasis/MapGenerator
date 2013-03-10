@@ -48,6 +48,37 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 		height = width;
 	}
 	
+	var terrain = worldMap.getTerrain();
+	
+	var imageData = map.createImageData(width, height);
+	
+	for(var x = 0; x < width; x++) {
+		
+		for(var y = 0; y < height; y++) {
+			
+			var index = (x + y * imageData.width) * 4;
+			
+			var xRatio = x / width;
+			
+			var yRatio = y / height;
+			
+			var value = terrain[Math.floor(xRatio * terrain.length)][Math.floor(yRatio * terrain.length)];
+			
+			if(value < 0) {
+				
+				imageData.data[index+2] = 255 - (((value+500)/500) * 55);
+				
+			} else { 
+			
+				imageData.data[index+1] = 255 - ((value/1500) * 55);
+			}
+			
+			imageData.data[index+3] = 255;
+		}
+	}
+	
+	map.putImageData(imageData, 0, 0);
+	
 	map.save();
 	
 	if(drawDebug) {
@@ -281,6 +312,36 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 	
 	var quadTree = new QuadTree(new Point(-radius,-radius), new Point(radius,radius));
 	
+	var terrain = new Array(65);
+	
+	for(var i = 0; i < terrain.length; i++) {
+
+		terrain[i] = new Array(terrain.length);
+	}
+	
+	terrain[0][0] = (Math.random() * 2000) - 500;
+	
+	terrain[0][terrain.length - 1] = (Math.random() * 2000) - 500;
+	
+	terrain[terrain.length - 1][0] = (Math.random() * 2000) - 500;
+	
+	terrain[terrain.length - 1][terrain.length - 1] = (Math.random() * 2000) - 500;
+	
+	var width = terrain.length - 1;
+	
+	while(width >= 1) {
+		
+		for(var x = 0; x + width < terrain.length; x += width) {
+	
+			for(var y = 0; y + width < terrain.length; y += width) {
+				
+				generateTerrain(terrain, x, y, x + width, y + width);
+			}
+		}
+		
+		width = width / 2;
+	}
+	
 	var id = 1;
 
 	for(var cityIndex in cities) {
@@ -290,6 +351,100 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 		quadTree.addItem(city, id, city.getPosition());
 		
 		id += 1;
+	}
+	
+	function generateTerrain(terrain, minX, minY, maxX, maxY) {
+				
+		var average = (terrain[minX][minY] + terrain[minX][maxY] + terrain[maxX][minY] + terrain[maxX][maxY]) / 4;
+		
+		var random = (Math.random() * 300) - 200;
+		
+		var halfDistance = (maxX - minX) / 2;
+		
+		if (halfDistance >= 1) {
+						
+			var midX = minX + halfDistance;
+			
+			var midY = minY + halfDistance;
+			
+			terrain[midX][midY] = average + random;
+						
+			var negMinX = minX - halfDistance;
+			
+			var negMinY = minY - halfDistance;
+			
+			var negMaxX = maxX + halfDistance;
+			
+			var negMaxY = maxY + halfDistance;
+			
+			// Left Midpoint
+			
+			average = terrain[minX][minY] + terrain [minX][maxY] + terrain[midX][midY];
+			
+			if(negMinX >= 0) {
+				
+				average = (average + terrain[negMinX][midY]) / 4; 
+				
+			} else {
+				
+				average = average / 3;
+			}
+			
+			random = (Math.random() * 300) - 200;
+			
+			terrain[minX][midY] = average + random;
+			
+			// Top Midpoint
+			
+			average = terrain[minX][minY] + terrain [maxX][minY] + terrain[midX][midY];
+			
+			if(negMinY >= 0) {
+				
+				average = (average + terrain[midX][negMinY]) / 4; 
+				
+			} else {
+				
+				average = average / 3;
+			}
+			
+			random = (Math.random() * 300) - 200;
+			
+			terrain[midX][minY] = average + random;
+			
+			// Right Midpoint
+			
+			average = terrain[maxX][minY] + terrain [maxX][maxY] + terrain[midX][midY];
+			
+			if(negMaxX < terrain.length) {
+				
+				average = (average + terrain[negMaxX][midY]) / 4; 
+				
+			} else {
+				
+				average = average / 3;
+			}
+			
+			random = (Math.random() * 300) - 200;
+			
+			terrain[maxX][midY] = average + random;
+			
+			// Bottom Midpoint
+			
+			average = terrain[minX][maxY] + terrain [maxX][maxY] + terrain[midX][midY];
+			
+			if(negMaxY < terrain.length) {
+				
+				average = (average + terrain[midX][negMaxY]) / 4; 
+				
+			} else {
+				
+				average = average / 3;
+			}
+			
+			random = (Math.random() * 300) - 200;
+			
+			terrain[midX][maxY] = average + random;
+		}
 	}
 	
 	this.addCity = function(cityParam) {
@@ -339,6 +494,11 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 	this.getSections = function() {
 	
 		return sections;
+	}
+	
+	this.getTerrain = function() {
+		
+		return terrain;
 	}
 }
 
