@@ -109,7 +109,18 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 	
 	map.restore();
 	
-	var cities = worldMap.getCities();	
+	var cities = worldMap.getCities();
+	
+	map.strokeStyle = 'brown';
+	
+	if(drawRoadsParam) {
+
+		drawRoads(worldMap, map, worldMap.getCities()[0]);
+	}
+	
+	map.strokeStyle = 'black';
+	
+	map.fillStyle = 'white';
 		
 	for(var cityIndex in cities) {
 		
@@ -123,12 +134,9 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 		
 		map.fill();
 		
+		map.stroke();
+		
 		map.closePath();
-	}
-	
-	if(drawRoadsParam) {
-
-		drawRoads(worldMap, map, worldMap.getCities()[0]);
 	}
 }
 
@@ -499,6 +507,11 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 	this.getTerrain = function() {
 		
 		return terrain;
+	}
+	
+	this.getVersion = function() {
+		
+		return "0.1";
 	}
 }
 

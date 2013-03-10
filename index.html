@@ -48,7 +48,7 @@
 			debugDrawing = !debugDrawing;
 			redrawMap();
 		}
-		
+				
 		function redrawMap() {
 			
 			document.getElementById("values").innerHTML = "Levels: " + mapLevels + ", Initial Section Count: " + angleSteps + ", Section Increase Factor: " + angleStepIncrease;
@@ -60,16 +60,20 @@
 			
 			worldMap = generateMap(mapLevels, angleSteps, angleStepIncrease);
 			
+			document.getElementById("version").innerHTML = "MapGenerator Version: " + worldMap.getVersion();
+			
 			drawMap(worldMap, "mapCanvas", true, debugDrawing);
 		}
 	</script>
 	<link rel="stylesheet" type="text/css" href="MapGen.css">
 </head>
 <body>
-	<div id="mapOverTooltip">Hello World</div>
+	<div id="mapOverTooltip"></div>
 	<canvas id="mapCanvas" width="400px" height="400px"	style="border:1px solid #000000;">
 	</canvas>
-	<div id="values"> </div>
+	<div id="values"></div>
+	<br/>
+	<a href="#" onclick="redrawMap()">Create New Map</a>
 	<br/>
 	<a href="#" onclick="toggleDebugging()">Toggle Debugging</a>
 	<br/>
@@ -81,6 +85,8 @@
 	<br/>
 	<a href="#" onclick="increaseStepFactor()">Increase Section Increase Factor</a>
 	<a href="#" onclick="decreaseStepFactor()">Decrease Section Increase Factor</a>
+	<br/><br/>
+	<div id="version"></div>
 	
 	<script>
 		redrawMap();
@@ -120,8 +126,8 @@
 				
 				toolTip.innerHTML = cityHtml;
 				
-				toolTip.style.left = (evt.clientX + 15) + "px";
-				toolTip.style.top = evt.clientY + "px";
+				toolTip.style.left = (evt.clientX + window.scrollX + 15) + "px";
+				toolTip.style.top = (evt.clientY + window.scrollY) + "px";
 				toolTip.style.display = "block";
 				
 			} else {
