@@ -334,7 +334,9 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 	
 	var quadTree = new QuadTree(new Point(-radius,-radius), new Point(radius,radius));
 	
-	var terrain = new Array(65);
+	var terrainLod = 5;
+	
+	var terrain = new Array(Math.pow(2, terrainLod) + 1);
 	
 	for(var i = 0; i < terrain.length; i++) {
 
