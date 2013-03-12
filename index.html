@@ -5,6 +5,8 @@
 		var mapLevels = 2;
 		var angleSteps = 4;
 		var angleStepIncrease = 2;
+		var terrainLod = 5;
+		var terrainInterpolate = true;
 		var debugDrawing = false;
 		var worldMap;
 		
@@ -51,7 +53,7 @@
 		
 		function createMap() {
 			
-			worldMap = generateMap(mapLevels, angleSteps, angleStepIncrease);
+			worldMap = generateMap(mapLevels, angleSteps, angleStepIncrease, terrainLod, terrainInterpolate);
 			
 			document.getElementById("version").innerHTML = "MapGenerator Version: " + worldMap.getVersion();
 			

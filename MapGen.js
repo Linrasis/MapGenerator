@@ -48,8 +48,6 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 		height = width;
 	}
 	
-	var terrain = worldMap.getTerrain();
-	
 	var imageData = map.createImageData(width, height);
 	
 	for(var x = 0; x < width; x++) {
@@ -62,21 +60,7 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 			
 			var yRatio = y / height;
 			
-			var terrainWidth = terrain.length - 1;
-			
-			var minX = Math.floor(xRatio * terrainWidth), maxX = Math.floor(xRatio * terrainWidth) + 1;
-	
-			var minY = Math.floor(yRatio * terrainWidth), maxY = Math.floor(yRatio * terrainWidth) + 1;
-
-			var xVal = xRatio * terrainWidth, yVal = yRatio * terrainWidth;
-
-			var value = ((maxX - xVal)*(maxY - yVal))*terrain[minX][minY];
-			
-			value = value + ((xVal - minX)*(maxY - yVal))*terrain[maxX][minY];
-			
-			value = value + ((maxX - xVal)*(yVal - minY))*terrain[minX][maxY];
-			
-			value = value + ((xVal - minX)*(yVal - minY))*terrain[maxX][maxY];
+			var value = worldMap.getTerrain().getHeight(xRatio, yRatio);
 			
 			if(value < 0) {
 				
@@ -203,7 +187,7 @@ function drawRoads(worldMap, map, city) {
 	}
 }
 
-function generateMap(steps, angleSteps, angleStepIncrease) {
+function generateMap(steps, angleSteps, angleStepIncrease, terrainLodParam, terrainInterpParam) {
 
 	var cities = new Array();
 	
@@ -213,7 +197,7 @@ function generateMap(steps, angleSteps, angleStepIncrease) {
 	
 	var sections = new Array();
 	
-	var worldMap = new WorldMap(cities, steps * 50, sections);
+	var worldMap = new WorldMap(cities, steps * 50, sections, terrainLodParam, terrainInterpParam);
 	
 	if(steps > 0) {
 	
@@ -324,7 +308,7 @@ function convertCanvasToWorldCoordinate(coordinate, worldMap, width, height) {
 	 return cityNames[Math.floor(randomIndex)];
  }
 
-function WorldMap(citiesParam, radiusParam, sectionsParam) {
+function WorldMap(citiesParam, radiusParam, sectionsParam, terrainLodParam, terrainInterpParam) {
 	
 	var cities = citiesParam;
 	
@@ -334,10 +318,109 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 	
 	var quadTree = new QuadTree(new Point(-radius,-radius), new Point(radius,radius));
 	
-	var terrainLod = 5;
+	var terrain = new Terrain(terrainLodParam, terrainInterpParam);
 	
-	var terrain = new Array(Math.pow(2, terrainLod) + 1);
+	var id = 1;
+
+	for(var cityIndex in cities) {
 	
+		var city = cities[cityIndex];
+		
+		quadTree.addItem(city, id, city.getPosition());
+		
+		id += 1;
+	}
+	
+	this.addCity = function(cityParam) {
+	
+		cities.push(cityParam);
+		
+		quadTree.addItem(cityParam, id, cityParam.getPosition());
+		
+		id += 1;
+	}
+	
+	this.getCities = function(shape) {
+		
+		if(typeof shape === 'undefined' || shape === null) {
+
+			return cities;
+			
+		} else {
+			
+			return quadTree.getItems(shape);			
+		}
+	}
+		
+	this.getRadius = function() {
+
+		return radius;
+	}
+	
+	this.setRadius = function(radiusParam) {
+	
+		radius = radiusParam;
+		
+		quadTree = new QuadTree(new Point(-radius,-radius), new Point(radius,radius));
+		
+		id = 1;
+
+		for(var cityIndex in cities) {
+		
+			var city = cities[cityIndex];
+			
+			quadTree.addItem(city, id, city.getPosition());
+			
+			id += 1;
+		}
+	}
+
+	this.getSections = function() {
+	
+		return sections;
+	}
+	
+	this.getTerrain = function() {
+		
+		return terrain;
+	}
+	
+	this.getVersion = function() {
+		
+		return "0.3";
+	}
+}
+
+function City(nameParam, positionParam) {
+	
+	var name = nameParam;
+	
+	var position = positionParam;
+	
+	var childCities = new Array();
+	
+	this.getName = function() {
+		
+		return name;
+	}
+	
+	this.getPosition = function() {
+		
+		return position;
+	}
+	
+	this.getChildCities = function() {
+	
+		return childCities;
+	}
+}
+
+function Terrain(lodParam,  interpolateParam) {
+	
+	var terrain = new Array(Math.pow(2, lodParam) + 1);
+	
+	var interpolate = interpolateParam;
+
 	for(var i = 0; i < terrain.length; i++) {
 
 		terrain[i] = new Array(terrain.length);
@@ -366,16 +449,42 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 		width = width / 2;
 	}
 	
-	var id = 1;
-
-	for(var cityIndex in cities) {
-	
-		var city = cities[cityIndex];
+	this.getHeightArray = function() {
 		
-		quadTree.addItem(city, id, city.getPosition());
-		
-		id += 1;
+		return terrain;
 	}
+	
+	this.getHeight = function(xParam, yParam) {
+					
+		var terrainWidth = terrain.length - 1;
+		
+		if(interpolate) {
+			
+			var minX = Math.floor(xParam * terrainWidth), maxX = Math.floor(xParam * terrainWidth) + 1;
+		
+			var minY = Math.floor(yParam * terrainWidth), maxY = Math.floor(yParam * terrainWidth) + 1;
+
+			var xVal = xParam * terrainWidth, yVal = yParam * terrainWidth;
+
+			var value = ((maxX - xVal)*(maxY - yVal))*terrain[minX][minY];
+				
+			value = value + ((xVal - minX)*(maxY - yVal))*terrain[maxX][minY];
+			
+			value = value + ((maxX - xVal)*(yVal - minY))*terrain[minX][maxY];
+				
+			value = value + ((xVal - minX)*(yVal - minY))*terrain[maxX][maxY];
+			
+			return value;
+			
+		} else {
+			
+			var x = Math.floor(xParam * terrainWidth);
+			
+			var y = Math.floor(yParam * terrainWidth);
+			
+			return terrain[x][y];
+		}
+ 	}
 	
 	function generateTerrain(terrain, minX, minY, maxX, maxY) {
 				
@@ -469,89 +578,6 @@ function WorldMap(citiesParam, radiusParam, sectionsParam) {
 			
 			terrain[midX][maxY] = average + random;
 		}
-	}
-	
-	this.addCity = function(cityParam) {
-	
-		cities.push(cityParam);
-		
-		quadTree.addItem(cityParam, id, cityParam.getPosition());
-		
-		id += 1;
-	}
-	
-	this.getCities = function(shape) {
-		
-		if(typeof shape === 'undefined' || shape === null) {
-
-			return cities;
-			
-		} else {
-			
-			return quadTree.getItems(shape);			
-		}
-	}
-		
-	this.getRadius = function() {
-
-		return radius;
-	}
-	
-	this.setRadius = function(radiusParam) {
-	
-		radius = radiusParam;
-		
-		quadTree = new QuadTree(new Point(-radius,-radius), new Point(radius,radius));
-		
-		id = 1;
-
-		for(var cityIndex in cities) {
-		
-			var city = cities[cityIndex];
-			
-			quadTree.addItem(city, id, city.getPosition());
-			
-			id += 1;
-		}
-	}
-
-	this.getSections = function() {
-	
-		return sections;
-	}
-	
-	this.getTerrain = function() {
-		
-		return terrain;
-	}
-	
-	this.getVersion = function() {
-		
-		return "0.2";
-	}
-}
-
-function City(nameParam, positionParam) {
-	
-	var name = nameParam;
-	
-	var position = positionParam;
-	
-	var childCities = new Array();
-	
-	this.getName = function() {
-		
-		return name;
-	}
-	
-	this.getPosition = function() {
-		
-		return position;
-	}
-	
-	this.getChildCities = function() {
-	
-		return childCities;
 	}
 }
 
