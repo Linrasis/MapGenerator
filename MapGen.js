@@ -419,11 +419,14 @@ function Terrain(lodParam,  interpolateParam) {
 	
 	var terrain = new Array(Math.pow(2, lodParam) + 1);
 	
+	var area = new Array(Math.pow(2, lodParam) + 1);
+	
 	var interpolate = interpolateParam;
 
 	for(var i = 0; i < terrain.length; i++) {
 
 		terrain[i] = new Array(terrain.length);
+		area[i] = new Array(area.length);
 	}
 	
 	terrain[0][0] = (Math.random() * 2000) - 500;
@@ -447,6 +450,26 @@ function Terrain(lodParam,  interpolateParam) {
 		}
 		
 		width = width / 2;
+	}
+	
+	for(var x = 1; x < terrain.length - 1; x += 1) {
+		
+		for(var y = 1; y < terrain.length - 1; y += 1) {
+			
+			var value = terrain[x-1][y-1] * 1 + terrain[x][y-1] * 2;
+			
+			value = value + terrain[x+1][y-1] * 1 + terrain[x-1][y] * 2;
+			
+			value = value + terrain[x][y] * 4 + terrain[x+1][y] * 2;
+			
+			value = value + terrain[x-1][y+1] * 1 + terrain[x][y+1] * 2;
+			
+			value = value + terrain[x+1][y+1];
+			
+			value = value / 16;
+			
+			terrain[x][y] = value;
+		}
 	}
 	
 	this.getHeightArray = function() {
@@ -487,6 +510,8 @@ function Terrain(lodParam,  interpolateParam) {
  	}
 	
 	function generateTerrain(terrain, minX, minY, maxX, maxY) {
+		
+		var smoothingConst = 1.0;
 				
 		var average = (terrain[minX][minY] + terrain[minX][maxY] + terrain[maxX][minY] + terrain[maxX][maxY]) / 4;
 		
@@ -500,7 +525,7 @@ function Terrain(lodParam,  interpolateParam) {
 			
 			var midY = minY + halfDistance;
 			
-			terrain[midX][midY] = average + random;
+			terrain[midX][midY] = average + random * smoothingConst;
 						
 			var negMinX = minX - halfDistance;
 			
@@ -525,7 +550,7 @@ function Terrain(lodParam,  interpolateParam) {
 			
 			random = (Math.random() * 300) - 200;
 			
-			terrain[minX][midY] = average + random;
+			terrain[minX][midY] = average + random * smoothingConst;
 			
 			// Top Midpoint
 			
@@ -542,7 +567,7 @@ function Terrain(lodParam,  interpolateParam) {
 			
 			random = (Math.random() * 300) - 200;
 			
-			terrain[midX][minY] = average + random;
+			terrain[midX][minY] = average + random * smoothingConst;
 			
 			// Right Midpoint
 			
@@ -559,7 +584,7 @@ function Terrain(lodParam,  interpolateParam) {
 			
 			random = (Math.random() * 300) - 200;
 			
-			terrain[maxX][midY] = average + random;
+			terrain[maxX][midY] = average + random * smoothingConst;
 			
 			// Bottom Midpoint
 			
@@ -576,7 +601,7 @@ function Terrain(lodParam,  interpolateParam) {
 			
 			random = (Math.random() * 300) - 200;
 			
-			terrain[midX][maxY] = average + random;
+			terrain[midX][maxY] = average + random * smoothingConst;
 		}
 	}
 }
