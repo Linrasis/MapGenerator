@@ -77,6 +77,36 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 	
 	map.putImageData(imageData, 0, 0);
 	
+	if(drawDebug) {
+	
+		var areaImage = map.createImageData(width, height);
+		
+		var areas = worldMap.getTerrain().getAreas();
+		
+		var areaArray = worldMap.getTerrain().getAreaArray();
+		
+		for(var x = 0; x < width; x++) {
+			
+			for(var y = 0; y < height; y++) {
+				
+				var index = (x + y * areaImage.width) * 4;
+				
+				var xRatio = x / width;
+				
+				var yRatio = y / height;
+				
+				var areaIndex = areaArray[Math.floor(xRatio * areaArray.length)][Math.floor(yRatio * areaArray.length)];
+				
+				areaImage.data[index] = areas[areaIndex].color.r;
+				areaImage.data[index + 1] = areas[areaIndex].color.g;
+				areaImage.data[index + 2] = areas[areaIndex].color.b;
+				areaImage.data[index + 3] = 255;
+			}
+		}
+		
+		map.putImageData(areaImage, 0, 0);
+	}
+	
 	map.save();
 	
 	if(drawDebug) {
@@ -96,7 +126,7 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 			var secondCoordinate = convertWorldToCanvasCoordinate(section.getSecondPoint(), worldMap, width, height);
 						
 			map.moveTo(firstCoordinate.getX(), firstCoordinate.getY());
-			
+		
 			map.lineTo(secondCoordinate.getX(), secondCoordinate.getY());
 			
 			map.stroke();
@@ -419,14 +449,15 @@ function Terrain(lodParam,  interpolateParam) {
 	
 	var terrain = new Array(Math.pow(2, lodParam) + 1);
 	
-	var area = new Array(Math.pow(2, lodParam) + 1);
+	var area;
+	
+	var areas;
 	
 	var interpolate = interpolateParam;
 
 	for(var i = 0; i < terrain.length; i++) {
 
 		terrain[i] = new Array(terrain.length);
-		area[i] = new Array(area.length);
 	}
 	
 	terrain[0][0] = (Math.random() * 2000) - 500;
@@ -472,16 +503,31 @@ function Terrain(lodParam,  interpolateParam) {
 		}
 	}
 	
+	//Generate the areas twice, first to smooth out any tiny areas
+	generateAreas();
+	
+	generateAreas();
+	
 	this.getHeightArray = function() {
 		
 		return terrain;
 	}
 	
-	this.getHeight = function(xParam, yParam) {
-					
-		var terrainWidth = terrain.length - 1;
+	this.getAreas = function() {
 		
+		return areas;
+	}
+	
+	this.getAreaArray = function() {
+		
+		return area;
+	}
+	
+	this.getHeight = function(xParam, yParam) {
+							
 		if(interpolate) {
+			
+			var terrainWidth = terrain.length - 1;
 			
 			var minX = Math.floor(xParam * terrainWidth), maxX = Math.floor(xParam * terrainWidth) + 1;
 		
@@ -500,6 +546,8 @@ function Terrain(lodParam,  interpolateParam) {
 			return value;
 			
 		} else {
+			
+			var terrainWidth = terrain.length;
 			
 			var x = Math.floor(xParam * terrainWidth);
 			
@@ -603,6 +651,143 @@ function Terrain(lodParam,  interpolateParam) {
 			
 			terrain[midX][maxY] = average + random * smoothingConst;
 		}
+	}
+	
+	function fillArea(terrain, area, xStart, yStart, value, aboveZero) {
+		
+		var queue = new Array();
+		
+		queue.push({x: xStart, y: yStart});
+		
+		var squares = 0;
+		
+		var xTotal = 0;
+		
+		var yTotal = 0;
+		
+		while(queue.length > 0) {
+			
+			var position = queue.shift();
+			
+			if(position.x >= 0 && position.x < area.length && position.y >= 0 && position.y < area.length) {
+				
+				if(area[position.x][position.y] === undefined) {
+
+					if((aboveZero && terrain[position.x][position.y] >= 0) || (!aboveZero && terrain[position.x][position.y] < 0)) {
+
+						area[position.x][position.y] = value;
+						
+						squares += 1;
+						
+						xTotal += position.x;
+						
+						yTotal += position.y;
+						
+						queue.push({x: position.x - 1, y: position.y});
+						
+						queue.push({x: position.x + 1, y: position.y});
+						
+						queue.push({x: position.x, y: position.y - 1});
+						
+						queue.push({x: position.x, y: position.y + 1});
+						
+						queue.push({x: position.x - 1, y: position.y - 1});
+						
+						queue.push({x: position.x + 1, y: position.y + 1});
+						
+						queue.push({x: position.x + 1, y: position.y - 1});
+						
+						queue.push({x: position.x - 1, y: position.y + 1});
+					}
+				}
+			}			
+		}
+		
+		var color = { 	r: Math.random()*255, 
+						g: Math.random()*255, 
+						b: Math.random()*255};
+				
+		return { area: squares, center: new Point(xTotal/squares, yTotal/squares), color: color };
+	}
+	
+	function generateAreas() {
+		
+		area = new Array(Math.pow(2, lodParam) + 1);
+	
+		areas = new Array();
+		
+		for(var i = 0; i < terrain.length; i++) {
+
+			area[i] = new Array(area.length);
+		}
+			
+		var areaIndex = 0;
+		
+		for(var x = 0; x < area.length; x += 1) {
+			
+			for(var y = 0; y < area.length; y += 1) {
+							
+				if(area[x][y] === undefined) {
+					
+					var region = fillArea(terrain, area, x, y, areaIndex, terrain[x][y] >= 0);
+					
+					areas.push(region);
+									
+					areaIndex += 1;
+				}
+			}
+		}
+		
+		for(var areaIndex in areas) {
+			
+			var region = areas[areaIndex];
+			
+			if(region.area == 1) {
+				
+				var position = region.center;
+				
+				var x = position.getX();
+				
+				var y = position.getY();
+				
+				var average = 0;
+				
+				var points = 0;
+				
+				if(x - 1 >= 0) {
+					
+					average += terrain[x-1][y];
+					
+					points += 1;
+				}
+				
+				if(x + 1 < terrain.length) {
+					
+					average += terrain[x+1][y];
+					
+					points += 1;
+				}
+				
+				if(y - 1 >= 0) {
+					
+					average += terrain[x][y-1];
+					
+					points += 1;
+				}
+				
+				if(y + 1 < terrain.length) {
+					
+					average += terrain[x][y+1];
+					
+					points += 1;
+				}
+				
+				terrain[x][y] = average / points;
+				
+				areas[areaIndex] = null;
+				
+			}		
+		}		
 	}
 }
 
