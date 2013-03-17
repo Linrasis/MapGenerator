@@ -97,14 +97,37 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 				
 				var areaIndex = areaArray[Math.floor(xRatio * areaArray.length)][Math.floor(yRatio * areaArray.length)];
 				
-				areaImage.data[index] = areas[areaIndex].color.r;
-				areaImage.data[index + 1] = areas[areaIndex].color.g;
-				areaImage.data[index + 2] = areas[areaIndex].color.b;
+				areaImage.data[index] = areas[areaIndex].getColor().r;
+				areaImage.data[index + 1] = areas[areaIndex].getColor().g;
+				areaImage.data[index + 2] = areas[areaIndex].getColor().b;
 				areaImage.data[index + 3] = 255;
 			}
 		}
 		
 		map.putImageData(areaImage, 0, 0);
+		
+		map.strokeStyle = 'black';
+	
+		map.fillStyle = 'red';
+		
+		for(var areaIndex in areas) {
+		
+			var region = areas[areaIndex];
+
+			var centerPoint = new Point((region.getCenter().getX() / areaArray.length) * width, (region.getCenter().getY() / areaArray.length) * height);
+			
+			var coordinate = centerPoint;
+	
+			map.beginPath();
+			
+			map.arc(coordinate.getX() + (widthOffset / 2), coordinate.getY() + (heightOffset / 2), 3, 0, 2 * Math.PI, true);
+			
+			map.fill();
+			
+			map.stroke();
+			
+			map.closePath();
+		}
 	}
 	
 	map.save();
@@ -449,14 +472,6 @@ function City(nameParam, positionParam) {
 	}
 }
 
-function Region(totalAreaParam, centerPointParam, colorParam) {
-
-	var totalArea = totalAreaParam;
-	
-	var centerPointParam
-
-}
-
 function Terrain(lodParam,  interpolateParam) {
 	
 	var terrain = new Array(Math.pow(2, lodParam) + 1);
@@ -469,6 +484,7 @@ function Terrain(lodParam,  interpolateParam) {
 	
 	// Constructor
 	(function(){
+	
 		for(var i = 0; i < terrain.length; i++) {
 
 			terrain[i] = new Array(terrain.length);
@@ -522,6 +538,151 @@ function Terrain(lodParam,  interpolateParam) {
 		
 		generateAreas();
 	})();
+	
+	function Region(idParam, totalAreaParam, pointParam, colorParam) {
+	
+		var id = idParam;
+
+		var totalArea = totalAreaParam;
+		
+		var point = pointParam;
+		
+		var color = colorParam;
+		
+		var center = null;
+		
+		this.getId = function() {
+		
+			return id;
+		}
+		
+		this.getColor = function() {
+		
+			return color;
+		}
+		
+		this.getCenter = function() {
+		
+			if (center == null) {
+			
+				var markers = new Array(Math.pow(2, lodParam) + 1);
+				
+				for(var i = 0; i < terrain.length; i++) {
+
+					markers[i] = new Array(terrain.length);
+				}		
+			
+				var queue = new Array();
+		
+				queue.push(point);
+				
+				var squares = 0;
+				
+				var xTotal = 0;
+				
+				var yTotal = 0;
+				
+				while(queue.length > 0) {
+					
+					var position = queue.shift();
+					
+					if (position.getX() >= 0 && position.getX() < area.length && position.getY() >= 0 && position.getY() < area.length) {
+						
+						if (area[position.getX()][position.getY()] == id && markers[position.getX()][position.getY()] === undefined) {
+						
+							markers[position.getX()][position.getY()] = true;
+							
+							xTotal += position.getX();
+							
+							yTotal += position.getY();
+								
+							squares += 1;
+								
+							queue.push(new Point(position.getX() - 1, position.getY()));
+							
+							queue.push(new Point(position.getX() + 1, position.getY()));
+								
+							queue.push(new Point(position.getX(), position.getY() - 1));
+								
+							queue.push(new Point(position.getX(), position.getY() + 1));
+								
+							queue.push(new Point(position.getX() - 1, position.getY() - 1));
+								
+							queue.push(new Point(position.getX() + 1, position.getY() + 1));
+								
+							queue.push(new Point(position.getX() + 1, position.getY() - 1));
+								
+							queue.push(new Point(position.getX() - 1, position.getY() + 1));
+						}
+					}			
+				}
+				
+				var averagePoint = new Point(xTotal/squares, yTotal/squares);
+				
+				if (area[Math.floor(averagePoint.getX())][Math.floor(averagePoint.getY())] == id) {
+				
+					center = averagePoint;
+					
+				} else {
+					
+					for(var i = 0; i < terrain.length; i++) {
+
+						markers[i] = new Array(terrain.length);
+					}
+				
+					var closestPoint = point;
+					
+					var closestDistance = averagePoint.distance(point);
+				
+					queue = new Array();
+			
+					queue.push(point);
+					
+					while(queue.length > 0) {
+						
+						var position = queue.shift();
+						
+						if(position.getX() >= 0 && position.getX() < area.length && position.getY() >= 0 && position.getY() < area.length) {
+							
+							if(area[position.getX()][position.getY()] == id && markers[position.getX()][position.getY()] === undefined) {
+							
+								markers[position.getX()][position.getY()] = true;
+									
+								var distance = averagePoint.distance(position);
+								
+								if(distance < closestDistance) {
+								
+									closestDistance = distance;
+									
+									closestPoint = position;
+								}
+									
+								queue.push(new Point(position.getX() - 1, position.getY()));
+									
+								queue.push(new Point(position.getX() + 1, position.getY()));
+									
+								queue.push(new Point(position.getX(), position.getY() - 1));
+									
+								queue.push(new Point(position.getX(), position.getY() + 1));
+									
+								queue.push(new Point(position.getX() - 1, position.getY() - 1));
+									
+								queue.push(new Point(position.getX() + 1, position.getY() + 1));
+									
+								queue.push(new Point(position.getX() + 1, position.getY() - 1));
+									
+								queue.push(new Point(position.getX() - 1, position.getY() + 1));
+							}
+						}
+					}
+					
+					center = closestPoint;		
+				}
+			}
+		
+			return center;
+		}
+	}
 	
 	this.getHeightArray = function() {
 		
@@ -676,10 +837,6 @@ function Terrain(lodParam,  interpolateParam) {
 		
 		var squares = 0;
 		
-		var xTotal = 0;
-		
-		var yTotal = 0;
-		
 		while(queue.length > 0) {
 			
 			var position = queue.shift();
@@ -693,10 +850,6 @@ function Terrain(lodParam,  interpolateParam) {
 						area[position.x][position.y] = value;
 						
 						squares += 1;
-						
-						xTotal += position.x;
-						
-						yTotal += position.y;
 						
 						queue.push({x: position.x - 1, y: position.y});
 						
@@ -721,8 +874,8 @@ function Terrain(lodParam,  interpolateParam) {
 		var color = { 	r: Math.random()*255, 
 						g: Math.random()*255, 
 						b: Math.random()*255};
-				
-		return { area: squares, center: new Point(xTotal/squares, yTotal/squares), color: color, point: new Point(xStart,yStart) };
+						
+		return new Region(value, squares, new Point(xStart, yStart), color);
 	}
 	
 	function generateAreas() {
