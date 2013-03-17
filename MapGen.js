@@ -109,7 +109,7 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 	
 	map.save();
 	
-	if(drawDebug) {
+	if (drawDebug) {
 
 		var sections = worldMap.getSections();
 		
@@ -141,7 +141,7 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 	
 	map.strokeStyle = 'brown';
 	
-	if(drawRoadsParam) {
+	if (drawRoadsParam) {
 
 		drawRoads(worldMap, map, worldMap.getCities()[0]);
 	}
@@ -150,7 +150,7 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 	
 	map.fillStyle = 'white';
 		
-	for(var cityIndex in cities) {
+	for (var cityIndex in cities) {
 		
 		var city = cities[cityIndex];
 		
@@ -178,7 +178,7 @@ function drawRoads(worldMap, map, city) {
 	
 	var heightOffset = 0;
 	
-	if(width > height) {
+	if (width > height) {
 		
 		widthOffset = width - height;
 		
@@ -193,7 +193,7 @@ function drawRoads(worldMap, map, city) {
 
 	var childCities = city.getChildCities();
 	
-	for(var childCityIndex in childCities) {
+	for (var childCityIndex in childCities) {
 		
 		var childCity = childCities[childCityIndex];
 		
@@ -229,7 +229,7 @@ function generateMap(steps, angleSteps, angleStepIncrease, terrainLodParam, terr
 	
 	var worldMap = new WorldMap(cities, steps * 50, sections, terrainLodParam, terrainInterpParam);
 	
-	if(steps > 0) {
+	if (steps > 0) {
 	
 		var angleIncrement = (2.0 * Math.PI) / angleSteps;
 		
@@ -248,7 +248,7 @@ function generateCity(worldMap, steps, angleStart, angleSize, minDistance, maxDi
 
 	var angle = angleStart + (Math.random() * angleSize);
 	
-	if(worldMap.getRadius() < maxDistance) {
+	if (worldMap.getRadius() < maxDistance) {
 	
 		worldMap.setRadius(maxDistance);
 	}
@@ -275,7 +275,7 @@ function generateCity(worldMap, steps, angleStart, angleSize, minDistance, maxDi
 	
 	worldMap.getSections().push(sectionTopLine);
 	
-	if(steps > 0) {
+	if (steps > 0) {
 	
 		var angleIncrement = angleSize / childCities;
 	
@@ -351,15 +351,19 @@ function WorldMap(citiesParam, radiusParam, sectionsParam, terrainLodParam, terr
 	var terrain = new Terrain(terrainLodParam, terrainInterpParam);
 	
 	var id = 1;
-
-	for(var cityIndex in cities) {
 	
-		var city = cities[cityIndex];
+	// Constructor
+	(function(){
+
+		for(var cityIndex in cities) {
 		
-		quadTree.addItem(city, id, city.getPosition());
-		
-		id += 1;
-	}
+			var city = cities[cityIndex];
+			
+			quadTree.addItem(city, id, city.getPosition());
+			
+			id += 1;
+		}
+	})();
 	
 	this.addCity = function(cityParam) {
 	
@@ -417,7 +421,7 @@ function WorldMap(citiesParam, radiusParam, sectionsParam, terrainLodParam, terr
 	
 	this.getVersion = function() {
 		
-		return "0.3";
+		return "0.4";
 	}
 }
 
@@ -445,6 +449,14 @@ function City(nameParam, positionParam) {
 	}
 }
 
+function Region(totalAreaParam, centerPointParam, colorParam) {
+
+	var totalArea = totalAreaParam;
+	
+	var centerPointParam
+
+}
+
 function Terrain(lodParam,  interpolateParam) {
 	
 	var terrain = new Array(Math.pow(2, lodParam) + 1);
@@ -454,59 +466,62 @@ function Terrain(lodParam,  interpolateParam) {
 	var areas;
 	
 	var interpolate = interpolateParam;
+	
+	// Constructor
+	(function(){
+		for(var i = 0; i < terrain.length; i++) {
 
-	for(var i = 0; i < terrain.length; i++) {
-
-		terrain[i] = new Array(terrain.length);
-	}
-	
-	terrain[0][0] = (Math.random() * 2000) - 500;
-	
-	terrain[0][terrain.length - 1] = (Math.random() * 2000) - 500;
-	
-	terrain[terrain.length - 1][0] = (Math.random() * 2000) - 500;
-	
-	terrain[terrain.length - 1][terrain.length - 1] = (Math.random() * 2000) - 500;
-	
-	var width = terrain.length - 1;
-	
-	while(width >= 1) {
+			terrain[i] = new Array(terrain.length);
+		}
 		
-		for(var x = 0; x + width < terrain.length; x += width) {
-	
-			for(var y = 0; y + width < terrain.length; y += width) {
+		terrain[0][0] = (Math.random() * 2000) - 500;
+		
+		terrain[0][terrain.length - 1] = (Math.random() * 2000) - 500;
+		
+		terrain[terrain.length - 1][0] = (Math.random() * 2000) - 500;
+		
+		terrain[terrain.length - 1][terrain.length - 1] = (Math.random() * 2000) - 500;
+		
+		var width = terrain.length - 1;
+		
+		while(width >= 1) {
+			
+			for(var x = 0; x + width < terrain.length; x += width) {
+		
+				for(var y = 0; y + width < terrain.length; y += width) {
+					
+					generateTerrain(terrain, x, y, x + width, y + width);
+				}
+			}
+			
+			width = width / 2;
+		}
+		
+		for(var x = 1; x < terrain.length - 1; x += 1) {
+			
+			for(var y = 1; y < terrain.length - 1; y += 1) {
 				
-				generateTerrain(terrain, x, y, x + width, y + width);
+				var value = terrain[x-1][y-1] * 1 + terrain[x][y-1] * 2;
+				
+				value = value + terrain[x+1][y-1] * 1 + terrain[x-1][y] * 2;
+				
+				value = value + terrain[x][y] * 4 + terrain[x+1][y] * 2;
+				
+				value = value + terrain[x-1][y+1] * 1 + terrain[x][y+1] * 2;
+				
+				value = value + terrain[x+1][y+1];
+				
+				value = value / 16;
+				
+				terrain[x][y] = value;
 			}
 		}
 		
-		width = width / 2;
-	}
-	
-	for(var x = 1; x < terrain.length - 1; x += 1) {
+		//Generate the areas twice, first to smooth out any tiny areas
+		generateAreas();
 		
-		for(var y = 1; y < terrain.length - 1; y += 1) {
-			
-			var value = terrain[x-1][y-1] * 1 + terrain[x][y-1] * 2;
-			
-			value = value + terrain[x+1][y-1] * 1 + terrain[x-1][y] * 2;
-			
-			value = value + terrain[x][y] * 4 + terrain[x+1][y] * 2;
-			
-			value = value + terrain[x-1][y+1] * 1 + terrain[x][y+1] * 2;
-			
-			value = value + terrain[x+1][y+1];
-			
-			value = value / 16;
-			
-			terrain[x][y] = value;
-		}
-	}
-	
-	//Generate the areas twice, first to smooth out any tiny areas
-	generateAreas();
-	
-	generateAreas();
+		generateAreas();
+	})();
 	
 	this.getHeightArray = function() {
 		
@@ -707,7 +722,7 @@ function Terrain(lodParam,  interpolateParam) {
 						g: Math.random()*255, 
 						b: Math.random()*255};
 				
-		return { area: squares, center: new Point(xTotal/squares, yTotal/squares), color: color };
+		return { area: squares, center: new Point(xTotal/squares, yTotal/squares), color: color, point: new Point(xStart,yStart) };
 	}
 	
 	function generateAreas() {
@@ -1172,27 +1187,31 @@ function Line(firstPointParam, secondPointParam) {
 function Vector(firstParam, secondParam) {
 	
 	var i, j;
-		
-	if(firstParam instanceof Point && secondParam instanceof Point) {
-
-		i = secondParam.getX() - firstParam.getX();
-		
-		j = secondParam.getY() - firstParam.getY();
-		
-	} else if (secondParam instanceof Vector) {
-		
-		i = firstParam * secondParam.getI();
-		
-		j = firstParam * secondParam.getJ();
-		
-	} else {
-		
-		i = firstParam;
-		
-		j = secondParam;
-	}
 	
 	var magnitude = null;
+	
+	// Constructor
+	(function(){
+	
+		if(firstParam instanceof Point && secondParam instanceof Point) {
+
+			i = secondParam.getX() - firstParam.getX();
+			
+			j = secondParam.getY() - firstParam.getY();
+			
+		} else if (secondParam instanceof Vector) {
+			
+			i = firstParam * secondParam.getI();
+			
+			j = firstParam * secondParam.getJ();
+			
+		} else {
+			
+			i = firstParam;
+			
+			j = secondParam;
+		}
+	})();
 	
 	this.getI = function() {
 		
@@ -1247,18 +1266,22 @@ function Point(firstParam, secondParam) {
 	
 	var x, y;
 	
-	if(firstParam instanceof Point && secondParam instanceof Vector) {
-		
-		x = firstParam.getX() + secondParam.getI();
-		
-		y = firstParam.getY() + secondParam.getJ();
-		
-	} else {
-		
-		x = firstParam;
-		
-		y = secondParam;
-	}
+	// Constructor
+	(function(){
+	
+		if(firstParam instanceof Point && secondParam instanceof Vector) {
+			
+			x = firstParam.getX() + secondParam.getI();
+			
+			y = firstParam.getY() + secondParam.getJ();
+			
+		} else {
+			
+			x = firstParam;
+			
+			y = secondParam;
+		}
+	})();
 	
 	this.getX = function() {
 		
