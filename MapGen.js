@@ -23,7 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
  
-function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
+function drawMap(worldMap, canvasId, drawRoadsParam, doNotInterpolate, drawDebug) {
 	
 	var map = document.getElementById(canvasId).getContext("2d");
 	
@@ -60,7 +60,7 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 			
 			var yRatio = y / height;
 			
-			var value = worldMap.getTerrain().getHeight(xRatio, yRatio);
+			var value = worldMap.getTerrain().getHeight(xRatio, yRatio, doNotInterpolate);
 			
 			if(value < 0) {
 				
@@ -91,11 +91,25 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 				
 				var index = (x + y * areaImage.width) * 4;
 				
-				var xRatio = x / width;
+				var xRatio = (x / width) * (areaArray.length - 1);
 				
-				var yRatio = y / height;
+				var xIndex = Math.floor(xRatio);
 				
-				var areaIndex = areaArray[Math.floor(xRatio * areaArray.length)][Math.floor(yRatio * areaArray.length)];
+				if((xRatio - xIndex) >= 0.5) {
+
+					xIndex += 1;
+				}
+				
+				var yRatio = (y / height) * (areaArray.length - 1);
+				
+				var yIndex = Math.floor(yRatio);
+				
+				if((yRatio - yIndex) >= 0.5) {
+					
+					yIndex += 1;
+				}
+				
+				var areaIndex = areaArray[xIndex][yIndex];
 				
 				areaImage.data[index] = areas[areaIndex].getColor().r;
 				areaImage.data[index + 1] = areas[areaIndex].getColor().g;
@@ -114,7 +128,7 @@ function drawMap(worldMap, canvasId, drawRoadsParam, drawDebug) {
 		
 			var region = areas[areaIndex];
 
-			var centerPoint = new Point((region.getCenter().getX() / areaArray.length) * width, (region.getCenter().getY() / areaArray.length) * height);
+			var centerPoint = new Point((region.getCenter().getX() / (areaArray.length - 1)) * width, (region.getCenter().getY() / (areaArray.length - 1)) * height);
 			
 			var coordinate = centerPoint;
 	
@@ -361,7 +375,7 @@ function convertCanvasToWorldCoordinate(coordinate, worldMap, width, height) {
 	 return cityNames[Math.floor(randomIndex)];
  }
 
-function WorldMap(citiesParam, radiusParam, sectionsParam, terrainLodParam, terrainInterpParam) {
+function WorldMap(citiesParam, radiusParam, sectionsParam, terrainLodParam) {
 	
 	var cities = citiesParam;
 	
@@ -371,7 +385,7 @@ function WorldMap(citiesParam, radiusParam, sectionsParam, terrainLodParam, terr
 	
 	var quadTree = new QuadTree(new Point(-radius,-radius), new Point(radius,radius));
 	
-	var terrain = new Terrain(terrainLodParam, terrainInterpParam);
+	var terrain = new Terrain(terrainLodParam);
 	
 	var id = 1;
 	
@@ -444,7 +458,7 @@ function WorldMap(citiesParam, radiusParam, sectionsParam, terrainLodParam, terr
 	
 	this.getVersion = function() {
 		
-		return "0.5";
+		return "0.6";
 	}
 }
 
@@ -472,15 +486,13 @@ function City(nameParam, positionParam) {
 	}
 }
 
-function Terrain(lodParam,  interpolateParam) {
+function Terrain(lodParam) {
 	
 	var terrain = new Array(Math.pow(2, lodParam) + 1);
 	
 	var area;
 	
 	var areas;
-	
-	var interpolate = interpolateParam;
 	
 	// Constructor
 	(function(){
@@ -533,10 +545,8 @@ function Terrain(lodParam,  interpolateParam) {
 			}
 		}
 		
-		//Generate the areas twice, first to smooth out any tiny areas
 		generateAreas();
 		
-		generateAreas();
 	})();
 	
 	function Region(idParam, totalAreaParam, pointParam, colorParam) {
@@ -699,37 +709,49 @@ function Terrain(lodParam,  interpolateParam) {
 		return area;
 	}
 	
-	this.getHeight = function(xParam, yParam) {
-							
-		if(interpolate) {
+	this.getHeight = function(xParam, yParam, doNotInterpolate) {
 			
-			var terrainWidth = terrain.length - 1;
+		var terrainWidth = terrain.length - 1;
 			
-			var minX = Math.floor(xParam * terrainWidth), maxX = Math.floor(xParam * terrainWidth) + 1;
+		var minX = Math.floor(xParam * terrainWidth), maxX = minX + 1;
 		
-			var minY = Math.floor(yParam * terrainWidth), maxY = Math.floor(yParam * terrainWidth) + 1;
+		var minY = Math.floor(yParam * terrainWidth), maxY = minY + 1;
 
-			var xVal = xParam * terrainWidth, yVal = yParam * terrainWidth;
+		var xVal = xParam * terrainWidth, yVal = yParam * terrainWidth;
+		
+		if (doNotInterpolate) {
+		
+			if(xVal - minX >= 0.5) {
+			
+				xVal = maxX;
+				
+			} else {
+			
+				xVal = minX;
+			}
+			
+			if(yVal - minY >= 0.5) {
+			
+				yVal = maxY;
+				
+			} else {
+			
+				yVal = minY;
+			}
+			
+			return terrain[xVal][yVal];
+		
+		} else {
 
 			var value = ((maxX - xVal)*(maxY - yVal))*terrain[minX][minY];
-				
+					
 			value = value + ((xVal - minX)*(maxY - yVal))*terrain[maxX][minY];
 			
 			value = value + ((maxX - xVal)*(yVal - minY))*terrain[minX][maxY];
-				
+					
 			value = value + ((xVal - minX)*(yVal - minY))*terrain[maxX][maxY];
-			
+				
 			return value;
-			
-		} else {
-			
-			var terrainWidth = terrain.length;
-			
-			var x = Math.floor(xParam * terrainWidth);
-			
-			var y = Math.floor(yParam * terrainWidth);
-			
-			return terrain[x][y];
 		}
  	}
 	
@@ -904,57 +926,6 @@ function Terrain(lodParam,  interpolateParam) {
 					areaIndex += 1;
 				}
 			}
-		}
-		
-		for(var areaIndex in areas) {
-			
-			var region = areas[areaIndex];
-			
-			if(region.area == 1) {
-				
-				var position = region.center;
-				
-				var x = position.getX();
-				
-				var y = position.getY();
-				
-				var average = 0;
-				
-				var points = 0;
-				
-				if(x - 1 >= 0) {
-					
-					average += terrain[x-1][y];
-					
-					points += 1;
-				}
-				
-				if(x + 1 < terrain.length) {
-					
-					average += terrain[x+1][y];
-					
-					points += 1;
-				}
-				
-				if(y - 1 >= 0) {
-					
-					average += terrain[x][y-1];
-					
-					points += 1;
-				}
-				
-				if(y + 1 < terrain.length) {
-					
-					average += terrain[x][y+1];
-					
-					points += 1;
-				}
-				
-				terrain[x][y] = average / points;
-				
-				areas[areaIndex] = null;
-				
-			}		
 		}		
 	}
 }
