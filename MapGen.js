@@ -444,7 +444,7 @@ function WorldMap(citiesParam, radiusParam, sectionsParam, terrainLodParam, terr
 	
 	this.getVersion = function() {
 		
-		return "0.4";
+		return "0.5";
 	}
 }
 
