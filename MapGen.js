@@ -79,19 +79,19 @@ function drawMap(worldMap, canvasId, drawRoadsParam, doNotInterpolate, drawDebug
 	
 	if(drawDebug) {
 	
-		var areaImage = map.createImageData(width, height);
+		var regionMapImage = map.createImageData(width, height);
 		
-		var areas = worldMap.getTerrain().getAreas();
+		var regionList = worldMap.getRegions().getRegionList();
 		
-		var areaArray = worldMap.getTerrain().getAreaArray();
+		var regionMap = worldMap.getRegions().getRegionMap();
 		
 		for(var x = 0; x < width; x++) {
 			
 			for(var y = 0; y < height; y++) {
 				
-				var index = (x + y * areaImage.width) * 4;
+				var index = (x + y * regionMapImage.width) * 4;
 				
-				var xRatio = (x / width) * (areaArray.length - 1);
+				var xRatio = (x / width) * (regionMap.length - 1);
 				
 				var xIndex = Math.floor(xRatio);
 				
@@ -100,7 +100,7 @@ function drawMap(worldMap, canvasId, drawRoadsParam, doNotInterpolate, drawDebug
 					xIndex += 1;
 				}
 				
-				var yRatio = (y / height) * (areaArray.length - 1);
+				var yRatio = (y / height) * (regionMap.length - 1);
 				
 				var yIndex = Math.floor(yRatio);
 				
@@ -109,28 +109,26 @@ function drawMap(worldMap, canvasId, drawRoadsParam, doNotInterpolate, drawDebug
 					yIndex += 1;
 				}
 				
-				var areaIndex = areaArray[xIndex][yIndex];
+				var regionIndex = regionMap[xIndex][yIndex];
 				
-				areaImage.data[index] = areas[areaIndex].getColor().r;
-				areaImage.data[index + 1] = areas[areaIndex].getColor().g;
-				areaImage.data[index + 2] = areas[areaIndex].getColor().b;
-				areaImage.data[index + 3] = 255;
+				regionMapImage.data[index] = regionList[regionIndex].getColor().r;
+				regionMapImage.data[index + 1] = regionList[regionIndex].getColor().g;
+				regionMapImage.data[index + 2] = regionList[regionIndex].getColor().b;
+				regionMapImage.data[index + 3] = 255;
 			}
 		}
 		
-		map.putImageData(areaImage, 0, 0);
+		map.putImageData(regionMapImage, 0, 0);
 		
 		map.strokeStyle = 'black';
 	
 		map.fillStyle = 'red';
 		
-		for(var areaIndex in areas) {
+		for(var regionIndex in regionList) {
 		
-			var region = areas[areaIndex];
-
-			var centerPoint = new Point((region.getCenter().getX() / (areaArray.length - 1)) * width, (region.getCenter().getY() / (areaArray.length - 1)) * height);
+			var region = regionList[regionIndex];
 			
-			var coordinate = centerPoint;
+			var coordinate = convertWorldToCanvasCoordinate(region.getCenter(), worldMap, width, height);
 	
 			map.beginPath();
 			
@@ -143,37 +141,7 @@ function drawMap(worldMap, canvasId, drawRoadsParam, doNotInterpolate, drawDebug
 			map.closePath();
 		}
 	}
-	
-	map.save();
-	
-	if (drawDebug) {
 
-		var sections = worldMap.getSections();
-		
-		map.strokeStyle = '#c2c2c2';
-		
-		for(var sectionIndex in sections) {
-				
-			var section = sections[sectionIndex];
-			
-			map.beginPath();
-			
-			var firstCoordinate = convertWorldToCanvasCoordinate(section.getFirstPoint(), worldMap, width, height);
-			
-			var secondCoordinate = convertWorldToCanvasCoordinate(section.getSecondPoint(), worldMap, width, height);
-						
-			map.moveTo(firstCoordinate.getX(), firstCoordinate.getY());
-		
-			map.lineTo(secondCoordinate.getX(), secondCoordinate.getY());
-			
-			map.stroke();
-			
-			map.closePath();
-		}
-	}
-	
-	map.restore();
-	
 	var cities = worldMap.getCities();
 	
 	map.strokeStyle = 'brown';
@@ -254,77 +222,25 @@ function drawRoads(worldMap, map, city) {
 	}
 }
 
-function generateMap(steps, angleSteps, angleStepIncrease, terrainLodParam, terrainInterpParam) {
+function generateMap(mapWidth, mapResolution, mapDistanceUnit, terrainLod) {
+	
+	var worldMap = new WorldMap(mapWidth, mapResolution, mapDistanceUnit, terrainLod);
+	
+	var regionList = worldMap.getRegions().getRegionList();
+	
+	for(var regionIndex in regionList) {
+	
+		var region = regionList[regionIndex];
+		
+		if(region.isLand()) {
 
-	var cities = new Array();
-	
-	var centerCity = new City(getRandomCityName(), new Point(0,0));
-	
-	cities.push(centerCity);
-	
-	var sections = new Array();
-	
-	var worldMap = new WorldMap(cities, steps * 50, sections, terrainLodParam, terrainInterpParam);
-	
-	if (steps > 0) {
-	
-		var angleIncrement = (2.0 * Math.PI) / angleSteps;
+			var centerCity = new City(getRandomCityName(), region.getCenter());
 		
-		for(var angleStep = 0; angleStep < angleSteps; angleStep++) {
-		
-			var childCity = generateCity(worldMap, steps - 1, angleIncrement * angleStep, angleIncrement, 10, 50, angleStepIncrease);
-			
-			centerCity.getChildCities().push(childCity);
+			worldMap.addCity(centerCity);
 		}
 	}
 	
 	return worldMap;
-}
-
-function generateCity(worldMap, steps, angleStart, angleSize, minDistance, maxDistance, childCities) {
-
-	var angle = angleStart + (Math.random() * angleSize);
-	
-	if (worldMap.getRadius() < maxDistance) {
-	
-		worldMap.setRadius(maxDistance);
-	}
-			
-	var distance = minDistance + ( (maxDistance - minDistance) * Math.random() );
-			
-	var xVal = distance * Math.cos(angle);
-			
-	var yVal = distance * Math.sin(angle);
-	
-	var city = new City(getRandomCityName(), new Point(xVal, yVal));
-			
-	worldMap.addCity(city);
-	
-	var sectionLine = generateLine(angleStart, minDistance, maxDistance);
-	
-	var sectionBottomLine = new Line(sectionLine.getFirstPoint(), generatePoint(angleStart + angleSize, minDistance));
-	
-	var sectionTopLine = new Line(sectionLine.getSecondPoint(), generatePoint(angleStart + angleSize, maxDistance));
-			
-	worldMap.getSections().push(sectionLine);
-	
-	worldMap.getSections().push(sectionBottomLine);
-	
-	worldMap.getSections().push(sectionTopLine);
-	
-	if (steps > 0) {
-	
-		var angleIncrement = angleSize / childCities;
-	
-		for(var childCityIndex = 0; childCityIndex < childCities; childCityIndex++) {
-			
-			var childCity = generateCity(worldMap, steps - 1, angleStart + (angleIncrement * childCityIndex), angleIncrement, maxDistance * 1.1, maxDistance * 1.75, childCities);
-			
-			city.getChildCities().push(childCity);
-		}
-	}
-	
-	return city;
 }
 
 function generateLine(angle, startRadius, endRadius) {
@@ -342,25 +258,21 @@ function generatePoint(angle, distance) {
 }
 
 function convertWorldToCanvasCoordinate(coordinate, worldMap, width, height) {
-		
-	var worldMapDiameter = worldMap.getRadius() * 2;
 	
-	var xFactor = (coordinate.getX() + worldMap.getRadius()) / worldMapDiameter;
+	var xFactor = coordinate.getX() / worldMap.getMapWidth();
 		
-	var yFactor = (coordinate.getY() + worldMap.getRadius()) / worldMapDiameter;
+	var yFactor = coordinate.getY() / worldMap.getMapWidth();
 	
 	return new Point(width * xFactor, height * yFactor);		
 }
 
 function convertCanvasToWorldCoordinate(coordinate, worldMap, width, height) {
-		
-	var worldMapDiameter = worldMap.getRadius() * 2;
 	
 	var xFactor = coordinate.getX() / width;
 	
 	var yFactor = coordinate.getY() / height;
 		
-	return new Point((worldMapDiameter * xFactor) - worldMap.getRadius(), (worldMapDiameter * yFactor) - worldMap.getRadius());		
+	return new Point(worldMap.getMapWidth() * xFactor, worldMap.getMapWidth() * yFactor);		
 }
 
  var cityNames = ["Abingdon","Accrington","Acle","Acton","Adlington","Alcester",
@@ -375,32 +287,17 @@ function convertCanvasToWorldCoordinate(coordinate, worldMap, width, height) {
 	 return cityNames[Math.floor(randomIndex)];
  }
 
-function WorldMap(citiesParam, radiusParam, sectionsParam, terrainLodParam) {
+function WorldMap(mapWidth, mapResolution, mapDistanceUnit, terrainLod) {
 	
-	var cities = citiesParam;
+	var cities = [];
 	
-	var radius = radiusParam;
+	var quadTree = new QuadTree(new Point(0,0), new Point(mapWidth + 1, mapWidth + 1));
 	
-	var sections = sectionsParam;
+	var terrain = new Terrain(terrainLod);
 	
-	var quadTree = new QuadTree(new Point(-radius,-radius), new Point(radius,radius));
-	
-	var terrain = new Terrain(terrainLodParam);
+	var regions = new Regions(terrain, mapWidth, mapResolution);
 	
 	var id = 1;
-	
-	// Constructor
-	(function(){
-
-		for(var cityIndex in cities) {
-		
-			var city = cities[cityIndex];
-			
-			quadTree.addItem(city, id, city.getPosition());
-			
-			id += 1;
-		}
-	})();
 	
 	this.addCity = function(cityParam) {
 	
@@ -422,43 +319,35 @@ function WorldMap(citiesParam, radiusParam, sectionsParam, terrainLodParam) {
 			return quadTree.getItems(shape);			
 		}
 	}
-		
-	this.getRadius = function() {
-
-		return radius;
+	
+	this.getMapWidth = function() {
+	
+		return mapWidth;
 	}
 	
-	this.setRadius = function(radiusParam) {
+	this.getMapResolution = function() {
 	
-		radius = radiusParam;
-		
-		quadTree = new QuadTree(new Point(-radius,-radius), new Point(radius,radius));
-		
-		id = 1;
-
-		for(var cityIndex in cities) {
-		
-			var city = cities[cityIndex];
-			
-			quadTree.addItem(city, id, city.getPosition());
-			
-			id += 1;
-		}
-	}
-
-	this.getSections = function() {
-	
-		return sections;
+		return mapResolution;
 	}
 	
+	this.getMapDistanceUnit = function() {
+	
+		return mapDistanceUnit;
+	}
+
 	this.getTerrain = function() {
 		
 		return terrain;
 	}
 	
+	this.getRegions = function() {
+	
+		return regions;
+	}
+	
 	this.getVersion = function() {
 		
-		return "0.6";
+		return "0.7";
 	}
 }
 
@@ -489,10 +378,6 @@ function City(nameParam, positionParam) {
 function Terrain(lodParam) {
 	
 	var terrain = new Array(Math.pow(2, lodParam) + 1);
-	
-	var area;
-	
-	var areas;
 	
 	// Constructor
 	(function(){
@@ -543,170 +428,12 @@ function Terrain(lodParam) {
 				
 				terrain[x][y] = value;
 			}
-		}
-		
-		generateAreas();
-		
+		}		
 	})();
-	
-	function Region(idParam, totalAreaParam, pointParam, colorParam) {
-	
-		var id = idParam;
-
-		var totalArea = totalAreaParam;
-		
-		var point = pointParam;
-		
-		var color = colorParam;
-		
-		var center = null;
-		
-		this.getId = function() {
-		
-			return id;
-		}
-		
-		this.getColor = function() {
-		
-			return color;
-		}
-		
-		this.getCenter = function() {
-		
-			if (center == null) {
-			
-				var markers = new Array(Math.pow(2, lodParam) + 1);
-				
-				for(var i = 0; i < terrain.length; i++) {
-
-					markers[i] = new Array(terrain.length);
-				}		
-			
-				var queue = new Array();
-		
-				queue.push(point);
-				
-				var squares = 0;
-				
-				var xTotal = 0;
-				
-				var yTotal = 0;
-				
-				while(queue.length > 0) {
-					
-					var position = queue.shift();
-					
-					if (position.getX() >= 0 && position.getX() < area.length && position.getY() >= 0 && position.getY() < area.length) {
-						
-						if (area[position.getX()][position.getY()] == id && markers[position.getX()][position.getY()] === undefined) {
-						
-							markers[position.getX()][position.getY()] = true;
-							
-							xTotal += position.getX();
-							
-							yTotal += position.getY();
-								
-							squares += 1;
-								
-							queue.push(new Point(position.getX() - 1, position.getY()));
-							
-							queue.push(new Point(position.getX() + 1, position.getY()));
-								
-							queue.push(new Point(position.getX(), position.getY() - 1));
-								
-							queue.push(new Point(position.getX(), position.getY() + 1));
-								
-							queue.push(new Point(position.getX() - 1, position.getY() - 1));
-								
-							queue.push(new Point(position.getX() + 1, position.getY() + 1));
-								
-							queue.push(new Point(position.getX() + 1, position.getY() - 1));
-								
-							queue.push(new Point(position.getX() - 1, position.getY() + 1));
-						}
-					}			
-				}
-				
-				var averagePoint = new Point(xTotal/squares, yTotal/squares);
-				
-				if (area[Math.floor(averagePoint.getX())][Math.floor(averagePoint.getY())] == id) {
-				
-					center = averagePoint;
-					
-				} else {
-					
-					for(var i = 0; i < terrain.length; i++) {
-
-						markers[i] = new Array(terrain.length);
-					}
-				
-					var closestPoint = point;
-					
-					var closestDistance = averagePoint.distance(point);
-				
-					queue = new Array();
-			
-					queue.push(point);
-					
-					while(queue.length > 0) {
-						
-						var position = queue.shift();
-						
-						if(position.getX() >= 0 && position.getX() < area.length && position.getY() >= 0 && position.getY() < area.length) {
-							
-							if(area[position.getX()][position.getY()] == id && markers[position.getX()][position.getY()] === undefined) {
-							
-								markers[position.getX()][position.getY()] = true;
-									
-								var distance = averagePoint.distance(position);
-								
-								if(distance < closestDistance) {
-								
-									closestDistance = distance;
-									
-									closestPoint = position;
-								}
-									
-								queue.push(new Point(position.getX() - 1, position.getY()));
-									
-								queue.push(new Point(position.getX() + 1, position.getY()));
-									
-								queue.push(new Point(position.getX(), position.getY() - 1));
-									
-								queue.push(new Point(position.getX(), position.getY() + 1));
-									
-								queue.push(new Point(position.getX() - 1, position.getY() - 1));
-									
-								queue.push(new Point(position.getX() + 1, position.getY() + 1));
-									
-								queue.push(new Point(position.getX() + 1, position.getY() - 1));
-									
-								queue.push(new Point(position.getX() - 1, position.getY() + 1));
-							}
-						}
-					}
-					
-					center = closestPoint;		
-				}
-			}
-		
-			return center;
-		}
-	}
 	
 	this.getHeightArray = function() {
 		
 		return terrain;
-	}
-	
-	this.getAreas = function() {
-		
-		return areas;
-	}
-	
-	this.getAreaArray = function() {
-		
-		return area;
 	}
 	
 	this.getHeight = function(xParam, yParam, doNotInterpolate) {
@@ -850,8 +577,58 @@ function Terrain(lodParam) {
 			terrain[midX][maxY] = average + random * smoothingConst;
 		}
 	}
+}
+
+function Regions(terrain, mapWidth, mapWidthResolution) {
+
+	var regionMap = new Array(mapWidth / mapWidthResolution);
 	
-	function fillArea(terrain, area, xStart, yStart, value, aboveZero) {
+	var regions = [];
+
+	// Constructor
+	(function(){
+		
+		for(var i = 0; i < regionMap.length; i++) {
+
+			regionMap[i] = new Array(regionMap.length);
+		}
+			
+		var areaIndex = 0;
+		
+		for(var x = 0; x < regionMap.length; x += 1) {
+			
+			for(var y = 0; y < regionMap.length; y += 1) {
+							
+				if(regionMap[x][y] === undefined) {
+					
+					var region = fillArea(x, y, areaIndex, convertRegionCoordinateToTerrainHeight(x, y) >= 0);
+					
+					regions.push(region);
+									
+					areaIndex += 1;
+				}
+			}
+		}
+	})();
+	
+	this.getRegionMap = function() {
+	
+		return regionMap;
+	}
+	
+	this.getRegionList = function() {
+	
+		return regions;
+	}
+	
+	function convertRegionCoordinateToTerrainHeight(x, y) {
+	
+		var terrainWidth = terrain.getHeightArray().length;
+	
+		return terrain.getHeight(x / regionMap.length, y / regionMap.length);
+	}
+	
+	function fillArea(xStart, yStart, value, aboveZero) {
 		
 		var queue = new Array();
 		
@@ -863,13 +640,15 @@ function Terrain(lodParam) {
 			
 			var position = queue.shift();
 			
-			if(position.x >= 0 && position.x < area.length && position.y >= 0 && position.y < area.length) {
+			if(position.x >= 0 && position.x < regionMap.length && position.y >= 0 && position.y < regionMap.length) {
 				
-				if(area[position.x][position.y] === undefined) {
+				if(regionMap[position.x][position.y] === undefined) {
+				
+					var terrainHeight = convertRegionCoordinateToTerrainHeight(position.x, position.y);
 
-					if((aboveZero && terrain[position.x][position.y] >= 0) || (!aboveZero && terrain[position.x][position.y] < 0)) {
+					if((aboveZero && terrainHeight >= 0) || (!aboveZero && terrainHeight < 0)) {
 
-						area[position.x][position.y] = value;
+						regionMap[position.x][position.y] = value;
 						
 						squares += 1;
 						
@@ -897,36 +676,149 @@ function Terrain(lodParam) {
 						g: Math.random()*255, 
 						b: Math.random()*255};
 						
-		return new Region(value, squares, new Point(xStart, yStart), color);
+		return new Region(value, aboveZero, squares, new Point(xStart, yStart), color);
 	}
-	
-	function generateAreas() {
-		
-		area = new Array(Math.pow(2, lodParam) + 1);
-	
-		areas = new Array();
-		
-		for(var i = 0; i < terrain.length; i++) {
 
-			area[i] = new Array(area.length);
-		}
-			
-		var areaIndex = 0;
+	function Region(id, isLand, totalArea, point, color) {
 		
-		for(var x = 0; x < area.length; x += 1) {
+		var center = null;
+		
+		this.getId = function() {
+		
+			return id;
+		}
+		
+		this.getColor = function() {
+		
+			return color;
+		}
+		
+		this.isLand = function() {
+		
+			return isLand;
+		}
+		
+		this.getCenter = function() {
+		
+			if (center == null) {
 			
-			for(var y = 0; y < area.length; y += 1) {
+				var markers = new Array(regionMap.length);
+				
+				for(var i = 0; i < regionMap.length; i++) {
+
+					markers[i] = new Array(regionMap.length);
+				}		
+			
+				var queue = new Array();
+		
+				queue.push(point);
+				
+				var squares = 0;
+				
+				var xTotal = 0;
+				
+				var yTotal = 0;
+				
+				while(queue.length > 0) {
+					
+					var position = queue.shift();
+					
+					if (position.getX() >= 0 && position.getX() < regionMap.length && position.getY() >= 0 && position.getY() < regionMap.length) {
+						
+						if (regionMap[position.getX()][position.getY()] == id && markers[position.getX()][position.getY()] === undefined) {
+						
+							markers[position.getX()][position.getY()] = true;
 							
-				if(area[x][y] === undefined) {
+							xTotal += position.getX();
+							
+							yTotal += position.getY();
+								
+							squares += 1;
+								
+							queue.push(new Point(position.getX() - 1, position.getY()));
+							
+							queue.push(new Point(position.getX() + 1, position.getY()));
+								
+							queue.push(new Point(position.getX(), position.getY() - 1));
+								
+							queue.push(new Point(position.getX(), position.getY() + 1));
+								
+							queue.push(new Point(position.getX() - 1, position.getY() - 1));
+								
+							queue.push(new Point(position.getX() + 1, position.getY() + 1));
+								
+							queue.push(new Point(position.getX() + 1, position.getY() - 1));
+								
+							queue.push(new Point(position.getX() - 1, position.getY() + 1));
+						}
+					}			
+				}
+				
+				var averagePoint = new Point(xTotal/squares, yTotal/squares);
+				
+				if (regionMap[Math.floor(averagePoint.getX())][Math.floor(averagePoint.getY())] == id) {
+				
+					center = new Point((averagePoint.getX() / (regionMap.length - 1)) * mapWidth, (averagePoint.getY() / (regionMap.length - 1)) * mapWidth);
 					
-					var region = fillArea(terrain, area, x, y, areaIndex, terrain[x][y] >= 0);
+				} else {
 					
-					areas.push(region);
+					for(var i = 0; i < regionMap.length; i++) {
+
+						markers[i] = new Array(regionMap.length);
+					}
+				
+					var closestPoint = point;
+					
+					var closestDistance = averagePoint.distance(point);
+				
+					queue = new Array();
+			
+					queue.push(point);
+					
+					while(queue.length > 0) {
+						
+						var position = queue.shift();
+						
+						if(position.getX() >= 0 && position.getX() < regionMap.length && position.getY() >= 0 && position.getY() < regionMap.length) {
+							
+							if(regionMap[position.getX()][position.getY()] == id && markers[position.getX()][position.getY()] === undefined) {
+							
+								markers[position.getX()][position.getY()] = true;
 									
-					areaIndex += 1;
+								var distance = averagePoint.distance(position);
+								
+								if(distance < closestDistance) {
+								
+									closestDistance = distance;
+									
+									closestPoint = position;
+								}
+									
+								queue.push(new Point(position.getX() - 1, position.getY()));
+									
+								queue.push(new Point(position.getX() + 1, position.getY()));
+									
+								queue.push(new Point(position.getX(), position.getY() - 1));
+									
+								queue.push(new Point(position.getX(), position.getY() + 1));
+									
+								queue.push(new Point(position.getX() - 1, position.getY() - 1));
+									
+								queue.push(new Point(position.getX() + 1, position.getY() + 1));
+									
+								queue.push(new Point(position.getX() + 1, position.getY() - 1));
+									
+								queue.push(new Point(position.getX() - 1, position.getY() + 1));
+							}
+						}
+					}
+
+					center = new Point((closestPoint.getX() / (regionMap.length - 1)) * mapWidth, (closestPoint.getY() / (regionMap.length - 1)) * mapWidth);
 				}
 			}
-		}		
+		
+			return center;
+		}
 	}
 }
 

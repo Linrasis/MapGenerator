@@ -2,46 +2,20 @@
 <head>
 	<script src="MapGen.js"></script>
 	<script type="text/javascript">
-		var mapLevels = 2;
-		var angleSteps = 4;
-		var angleStepIncrease = 2;
-		var terrainLod = 5;
+		var cityLevels = 2;
+		var terrainLod = 6;
 		var doNotInterpolate = false;
 		var debugDrawing = false;
 		var worldMap;
 		
 		function addLevel() {
-			mapLevels = mapLevels + 1;
+			cityLevels = cityLevels + 1;
 			createMap();
 		}
 		
 		function removeLevel() {
-			if(mapLevels > 0) {
-				mapLevels = mapLevels - 1;
-				createMap();
-			}
-		}
-		
-		function addStep() {
-			angleSteps = angleSteps + 1;
-			createMap();
-		}
-		
-		function removeStep() {
-			if(angleSteps > 1) {
-				angleSteps = angleSteps - 1;
-				createMap();
-			}
-		}
-		
-		function increaseStepFactor() {
-			angleStepIncrease = angleStepIncrease + 1;
-			createMap();
-		}
-		
-		function decreaseStepFactor() {
-			if(angleStepIncrease > 1) {
-				angleStepIncrease = angleStepIncrease - 1;
+			if(cityLevels > 0) {
+				cityLevels = cityLevels - 1;
 				createMap();
 			}
 		}
@@ -53,7 +27,7 @@
 		
 		function createMap() {
 			
-			worldMap = generateMap(mapLevels, angleSteps, angleStepIncrease, terrainLod);
+			worldMap = generateMap(100, 1, "km", terrainLod);
 			
 			document.getElementById("version").innerHTML = "MapGenerator Version: " + worldMap.getVersion();
 			
@@ -62,7 +36,7 @@
 				
 		function redrawMap() {
 			
-			document.getElementById("values").innerHTML = "Levels: " + mapLevels + ", Initial Section Count: " + angleSteps + ", Section Increase Factor: " + angleStepIncrease;
+			document.getElementById("values").innerHTML = "Levels: " + cityLevels + ", Map Width: " + worldMap.getMapWidth() + worldMap.getMapDistanceUnit();
 		
 			var canvas = document.getElementById('mapCanvas');
 			var context = canvas.getContext('2d');
@@ -86,12 +60,6 @@
 	<br/>
 	<a href="#" onclick="addLevel()">Add Level</a>
 	<a href="#" onclick="removeLevel()">Remove Level</a>
-	<br/>
-	<a href="#" onclick="addStep()">Add Initial Section</a>
-	<a href="#" onclick="removeStep()">Remove Initial Section</a>
-	<br/>
-	<a href="#" onclick="increaseStepFactor()">Increase Section Increase Factor</a>
-	<a href="#" onclick="decreaseStepFactor()">Decrease Section Increase Factor</a>
 	<br/><br/>
 	<div id="version"></div>
 	
